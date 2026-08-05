@@ -10,6 +10,50 @@
 
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -485,6 +529,8 @@ h1,h2,h3{
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <div class="dash-shell">
 
@@ -506,7 +552,7 @@ h1,h2,h3{
 
     <nav class="dash-nav">
       <a href="dashboard.html" class="dash-nav-link"><span class="dash-nav-icon">▦</span> نظرة عامة</a>
-      <a href="#" class="dash-nav-link"><span class="dash-nav-icon">◈</span> الأفكار</a>
+      <a href="ideas.html" class="dash-nav-link"><span class="dash-nav-icon">◈</span> الأفكار</a>
       <a href="challenges.html" class="dash-nav-link"><span class="dash-nav-icon">◎</span> التحديات</a>
       <a href="projects.html" class="dash-nav-link"><span class="dash-nav-icon">▤</span> المشاريع</a>
       <a href="signals.html" class="dash-nav-link"><span class="dash-nav-icon">◉</span> الإشارات والرادار</a>
@@ -533,7 +579,7 @@ h1,h2,h3{
           <option>آخر ربع سنة</option>
           <option>هذا العام</option>
         </select>
-        <button class="btn btn-solid">تصدير تقرير PDF</button>
+        <button class="btn btn-solid" id="exportReportBtn">تصدير تقرير PDF</button>
       </div>
     </header>
 
@@ -576,7 +622,7 @@ h1,h2,h3{
       <div class="dash-panel">
         <div class="dash-panel-head">
           <h3>أفضل 5 موظفين مساهمين</h3>
-          <a href="#" class="link-arrow">عرض الكل ←</a>
+          <a href="team.html" class="link-arrow">عرض الكل ←</a>
         </div>
         <table class="dash-table">
           <thead><tr><th>الموظف</th><th>الإدارة</th><th>الأفكار المقدَّمة</th><th>الأفكار المعتمدة</th></tr></thead>
@@ -588,6 +634,12 @@ h1,h2,h3{
   </div>
 </div>
 
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 <script>
 
 /* ---- main.js ---- */
@@ -622,34 +674,40 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if a video URL is set
-// NOTE: reads from localStorage for now (placeholder until wired to Airtable
-// via the Worker); dashboard.js's "Company Video" panel writes this key.
-(function renderCompanyVideo() {
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
   const section = document.getElementById('videoShowcaseSection');
   const frame = document.getElementById('videoShowcaseFrame');
   if (!section || !frame) return;
 
-  const url = localStorage.getItem('ig_company_video_url');
-  if (!url) {
-    section.hidden = true;
-    return;
-  }
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
-  let embedUrl = url;
   try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    } else if (u.hostname === 'youtu.be') {
-      embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    } else if (u.hostname.includes('drive.google.com')) {
-      embedUrl = url.replace('/view', '/preview');
-    }
-  } catch { /* leave embedUrl as-is */ }
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
 
-  frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
-  section.hidden = false;
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
 })();
 
 /* ---- analytics.js ---- */
@@ -725,6 +783,10 @@ if (contributorsBody) {
     </tr>
   `).join('');
 }
+
+document.getElementById('exportReportBtn')?.addEventListener('click', () => {
+  alert('سيتم تفعيل تصدير التقارير كملف PDF قريبًا.');
+});
 
 </script>
 </body>

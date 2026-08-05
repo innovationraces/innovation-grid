@@ -11,6 +11,50 @@
 
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -566,6 +610,7 @@ h1,h2,h3{
 
 .idea-form{ display:flex; flex-direction:column; gap:16px; }
 .idea-form label{ display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600; color: var(--ink); }
+.idea-form label[hidden]{ display:none; }
 .idea-form input, .idea-form select, .idea-form textarea{
   font-family: var(--font-body); font-size: 14.5px; font-weight:400;
   padding: 11px 14px; border-radius: 10px; border:1px solid var(--line);
@@ -614,6 +659,8 @@ h1,h2,h3{
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <div class="dash-shell">
 
@@ -732,6 +779,12 @@ h1,h2,h3{
 </script>
 
 <script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<script>
 
 /* ---- main.js ---- */
 // Innovation Grid — plain JS, no build step, works directly on GitHub Pages
@@ -765,66 +818,81 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if a video URL is set
-// NOTE: reads from localStorage for now (placeholder until wired to Airtable
-// via the Worker); dashboard.js's "Company Video" panel writes this key.
-(function renderCompanyVideo() {
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
   const section = document.getElementById('videoShowcaseSection');
   const frame = document.getElementById('videoShowcaseFrame');
   if (!section || !frame) return;
 
-  const url = localStorage.getItem('ig_company_video_url');
-  if (!url) {
-    section.hidden = true;
-    return;
-  }
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
-  let embedUrl = url;
   try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    } else if (u.hostname === 'youtu.be') {
-      embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    } else if (u.hostname.includes('drive.google.com')) {
-      embedUrl = url.replace('/view', '/preview');
-    }
-  } catch { /* leave embedUrl as-is */ }
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
 
-  frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
-  section.hidden = false;
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
 })();
 
 /* ---- ideas.js ---- */
-// Innovation Grid — internal ideas bank logic
-// NOTE: data below is placeholder for layout/testing.
-// Once the Worker/Airtable backend is wired, this will pull real
-// Ideas records scoped to the logged-in company.
+// Innovation Grid — internal ideas bank logic (live data via the Worker)
 
-let IDEAS = [
-  { id: 1, title: 'نظام حجز قاعات اجتماعات ذكي', owner: 'خالد المطيري', dept: 'تقنية المعلومات', status: 'approved', date: '٢ أغسطس', description: 'نظام يسمح للموظفين بحجز القاعات لحظيًا مع تجنب التعارض، ويقترح بدائل تلقائيًا لو القاعة محجوزة.' },
-  { id: 2, title: 'برنامج تدوير المستلزمات المكتبية', owner: 'نورة القحطاني', dept: 'الموارد البشرية', status: 'review', date: '١ أغسطس', description: 'منصة داخلية لتبادل المستلزمات المكتبية غير المستخدمة بين الإدارات بدل شرائها من جديد.' },
-  { id: 3, title: 'لوحة متابعة استهلاك الطاقة بالفروع', owner: 'فهد العتيبي', dept: 'العمليات', status: 'review', date: '٣٠ يوليو', description: 'لوحة تجمع بيانات استهلاك الكهرباء من كل فرع وتنبّه عند تجاوز الحد الطبيعي.' },
-  { id: 4, title: 'تطبيق داخلي لطلبات الصيانة', owner: 'عبدالله الشهري', dept: 'المرافق', status: 'rejected', date: '٢٨ يوليو', description: 'تطبيق بسيط لتقديم طلبات الصيانة ومتابعة حالتها بدل المكالمات والرسائل المتفرقة.' },
-  { id: 5, title: 'نظام تقييم أداء الموردين', owner: 'سارة الدوسري', dept: 'المشتريات', status: 'approved', date: '٢٦ يوليو', description: 'نظام تقييم دوري للموردين بناءً على الالتزام بالمواعيد وجودة التوريد.' },
-  { id: 6, title: 'دليل تعريفي تفاعلي للموظف الجديد', owner: 'لمى الزهراني', dept: 'الموارد البشرية', status: 'submitted', date: '٢٤ يوليو', description: 'دليل رقمي تفاعلي يحل محل ملف PDF الحالي، بخطوات واضحة لأول أسبوعين.' },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+const COMPANY_ID = LOGGED_IN_USER?.companyId;
 
-const STATUS_LABEL = { submitted: 'مُقدَّمة', review: 'تحت المراجعة', approved: 'مقبولة', rejected: 'مرفوضة' };
+const STATUS_LABEL = { Submitted: 'مُقدَّمة', 'Under Review': 'تحت المراجعة', Approved: 'مقبولة', Rejected: 'مرفوضة', Draft: 'مسودة' };
+const STATUS_CLASS = { Submitted: 'review', 'Under Review': 'review', Approved: 'approved', Rejected: 'rejected', Draft: 'review' };
+const STATUS_TO_EN = { submitted: 'Submitted', review: 'Under Review', approved: 'Approved', rejected: 'Rejected' };
+
+let IDEAS = [];
 
 const tbody = document.getElementById('ideaBankBody');
 const searchInput = document.getElementById('ideaBankSearch');
 const statusFilter = document.getElementById('ideaStatusFilter');
-const deptFilter = document.getElementById('ideaDeptFilter');
+
+async function loadIdeas() {
+  if (!COMPANY_ID) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--slate-2); padding:20px;">سجّلي دخولك عشان تشوفي أفكار شركتك.</td></tr>`;
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/ideas?companyId=${COMPANY_ID}`);
+    const data = await res.json();
+    IDEAS = data.records || [];
+    renderIdeas();
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#B42318; padding:20px;">تعذّر تحميل الأفكار.</td></tr>`;
+  }
+}
 
 function ideaRowHTML(idea) {
   return `
     <tr data-id="${idea.id}">
-      <td>${idea.title}</td>
-      <td>${idea.owner}</td>
-      <td>${idea.dept}</td>
-      <td><span class="status-pill ${idea.status === 'submitted' ? 'review' : idea.status}">${STATUS_LABEL[idea.status]}</span></td>
-      <td>${idea.date}</td>
+      <td>${idea.Title || '—'}</td>
+      <td>—</td>
+      <td>${idea.Department || '—'}</td>
+      <td><span class="status-pill ${STATUS_CLASS[idea.Status] || 'review'}">${STATUS_LABEL[idea.Status] || idea.Status || '—'}</span></td>
+      <td>—</td>
     </tr>
   `;
 }
@@ -832,26 +900,25 @@ function ideaRowHTML(idea) {
 function renderIdeas() {
   const q = (searchInput?.value || '').trim().toLowerCase();
   const statusQ = statusFilter?.value || 'all';
-  const deptQ = deptFilter?.value || 'all';
-
+  const deptQ = document.getElementById('ideaDeptFilter')?.value || 'all';
   const filtered = IDEAS
-    .filter((i) => statusQ === 'all' || i.status === statusQ)
-    .filter((i) => deptQ === 'all' || i.dept === deptQ)
-    .filter((i) => !q || i.title.toLowerCase().includes(q) || i.owner.toLowerCase().includes(q));
+    .filter((i) => statusQ === 'all' || i.Status === STATUS_TO_EN[statusQ])
+    .filter((i) => deptQ === 'all' || i.Department === deptQ)
+    .filter((i) => !q || (i.Title || '').toLowerCase().includes(q));
 
   tbody.innerHTML = filtered.length
     ? filtered.map(ideaRowHTML).join('')
     : `<tr><td colspan="5" style="color:var(--slate-2); text-align:center; padding:20px;">لا توجد أفكار مطابقة.</td></tr>`;
 
   tbody.querySelectorAll('tr[data-id]').forEach((row) => {
-    row.addEventListener('click', () => openIdeaDetail(Number(row.dataset.id)));
+    row.addEventListener('click', () => openIdeaDetail(row.dataset.id));
   });
 }
 
-if (tbody) renderIdeas();
+if (tbody) loadIdeas();
 searchInput?.addEventListener('input', renderIdeas);
 statusFilter?.addEventListener('change', renderIdeas);
-deptFilter?.addEventListener('change', renderIdeas);
+document.getElementById('ideaDeptFilter')?.addEventListener('change', renderIdeas); // dept data not modeled yet
 
 // ---- Detail modal ----
 const overlay = document.getElementById('ideaDetailOverlay');
@@ -861,12 +928,13 @@ function openIdeaDetail(id) {
   const idea = IDEAS.find((i) => i.id === id);
   if (!idea) return;
   activeIdeaId = id;
-  document.getElementById('ideaDetailTitle').textContent = idea.title;
-  document.getElementById('ideaDetailOwner').textContent = idea.owner;
-  document.getElementById('ideaDetailDept').textContent = idea.dept;
-  document.getElementById('ideaDetailDate').textContent = idea.date;
-  document.getElementById('ideaDetailDescription').textContent = idea.description;
-  document.getElementById('ideaDetailStatusSelect').value = idea.status;
+  document.getElementById('ideaDetailTitle').textContent = idea.Title || '—';
+  document.getElementById('ideaDetailOwner').textContent = '—';
+  document.getElementById('ideaDetailDept').textContent = idea.Department || 'بدون إدارة محددة';
+  document.getElementById('ideaDetailDate').textContent = '—';
+  document.getElementById('ideaDetailDescription').textContent = idea.Description || 'مفيش وصف مُضاف.';
+  const statusMap = { Submitted: 'submitted', 'Under Review': 'review', Approved: 'approved', Rejected: 'rejected' };
+  document.getElementById('ideaDetailStatusSelect').value = statusMap[idea.Status] || 'submitted';
   document.getElementById('ideaDetailMsg').textContent = '';
   overlay.hidden = false;
 }
@@ -874,20 +942,40 @@ function openIdeaDetail(id) {
 document.getElementById('closeIdeaDetail')?.addEventListener('click', () => { overlay.hidden = true; });
 overlay?.addEventListener('click', (e) => { if (e.target === overlay) overlay.hidden = true; });
 
-document.getElementById('ideaDetailSaveStatus')?.addEventListener('click', () => {
-  const idea = IDEAS.find((i) => i.id === activeIdeaId);
-  if (!idea) return;
-  idea.status = document.getElementById('ideaDetailStatusSelect').value;
-  renderIdeas();
+document.getElementById('ideaDetailSaveStatus')?.addEventListener('click', async () => {
   const msg = document.getElementById('ideaDetailMsg');
-  msg.textContent = 'سيتم حفظ الحالة فعليًا عند ربط المنصة بقاعدة البيانات.';
-  msg.className = 'form-msg success';
+  const newStatus = STATUS_TO_EN[document.getElementById('ideaDetailStatusSelect').value];
+  try {
+    await fetch(`${API_BASE}/ideas/${activeIdeaId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    await loadIdeas();
+    msg.textContent = 'تم حفظ الحالة.';
+    msg.className = 'form-msg success';
+  } catch {
+    msg.textContent = 'تعذّر حفظ الحالة.';
+    msg.className = 'form-msg error';
+  }
 });
 
-document.getElementById('ideaDetailConvert')?.addEventListener('click', () => {
+document.getElementById('ideaDetailConvert')?.addEventListener('click', async () => {
   const msg = document.getElementById('ideaDetailMsg');
-  msg.textContent = 'سيتم تحويل الفكرة لمشروع فعليًا عند ربط المنصة بقاعدة البيانات.';
-  msg.className = 'form-msg success';
+  try {
+    await fetch(`${API_BASE}/projects`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('ideaDetailTitle').textContent,
+        companyId: COMPANY_ID,
+        sourceIdeaId: activeIdeaId,
+      }),
+    });
+    msg.textContent = 'تم إنشاء مشروع من الفكرة دي! تقدري تشوفيه في صفحة المشاريع.';
+    msg.className = 'form-msg success';
+  } catch {
+    msg.textContent = 'تعذّر تحويل الفكرة لمشروع.';
+    msg.className = 'form-msg error';
+  }
 });
 
 </script>

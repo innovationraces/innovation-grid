@@ -11,6 +11,50 @@
 
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -566,6 +610,7 @@ h1,h2,h3{
 
 .idea-form{ display:flex; flex-direction:column; gap:16px; }
 .idea-form label{ display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600; color: var(--ink); }
+.idea-form label[hidden]{ display:none; }
 .idea-form input, .idea-form select, .idea-form textarea{
   font-family: var(--font-body); font-size: 14.5px; font-weight:400;
   padding: 11px 14px; border-radius: 10px; border:1px solid var(--line);
@@ -615,6 +660,18 @@ h1,h2,h3{
 }
 .plan-hint{ font-size:12.5px; color: var(--slate-2); margin: 0 0 16px; }
 
+/* Contact channels */
+.contact-channels-form{ gap:12px !important; }
+.contact-channel-row{
+  flex-direction:row !important; align-items:center; gap:12px !important;
+  font-weight:400 !important;
+}
+.channel-icon{
+  width:38px; height:38px; border-radius:9px; flex-shrink:0;
+  background: var(--paper-2); display:flex; align-items:center; justify-content:center;
+}
+.channel-icon svg{ width:18px; height:18px; stroke: var(--slate); fill:none; }
+
 @media (max-width: 900px){
   .settings-columns{ grid-template-columns: 1fr; }
   .danger-row{ flex-direction:column; align-items:flex-start; }
@@ -623,6 +680,8 @@ h1,h2,h3{
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <div class="dash-shell">
 
@@ -720,6 +779,10 @@ h1,h2,h3{
           <div class="dash-panel">
             <h3>الأمان</h3>
             <form id="passwordChangeForm" class="idea-form">
+              <label>
+                <span>كلمة المرور الحالية</span>
+                <input type="password" name="currentPassword" placeholder="كلمة المرور الحالية">
+              </label>
               <div class="idea-form-row">
                 <label>
                   <span>كلمة المرور الجديدة</span>
@@ -734,6 +797,45 @@ h1,h2,h3{
                 <button type="submit" class="btn btn-solid">تحديث كلمة المرور</button>
               </div>
               <p id="passwordChangeMsg" class="form-msg" role="status"></p>
+            </form>
+          </div>
+
+          <div class="dash-panel">
+            <h3>بيانات التواصل</h3>
+            <p class="panel-hint">هتظهر بس القنوات اللي تحطي لينكها هنا في صفحة "تواصل معنا" بموقعك. سيبي أي حقل فاضي عشان القناة دي متظهرش خالص.</p>
+            <form id="contactChannelsForm" class="idea-form contact-channels-form">
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="email"></span>
+                <input type="email" name="email" placeholder="info@yourcompany.com">
+              </label>
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="whatsapp"></span>
+                <input type="url" name="whatsapp" placeholder="https://wa.me/9665xxxxxxxx">
+              </label>
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="facebook"></span>
+                <input type="url" name="facebook" placeholder="https://facebook.com/yourpage">
+              </label>
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="instagram"></span>
+                <input type="url" name="instagram" placeholder="https://instagram.com/yourpage">
+              </label>
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="x"></span>
+                <input type="url" name="x" placeholder="https://x.com/yourpage">
+              </label>
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="threads"></span>
+                <input type="url" name="threads" placeholder="https://threads.net/@yourpage">
+              </label>
+              <label class="contact-channel-row">
+                <span class="channel-icon" data-icon="linkedin"></span>
+                <input type="url" name="linkedin" placeholder="https://linkedin.com/company/yourcompany">
+              </label>
+              <div class="modal-actions">
+                <button type="submit" class="btn btn-solid">حفظ بيانات التواصل</button>
+              </div>
+              <p id="contactChannelsMsg" class="form-msg" role="status"></p>
             </form>
           </div>
 
@@ -756,7 +858,7 @@ h1,h2,h3{
             <h3>الباقة الحالية</h3>
             <div class="plan-badge">Trial — تجريبية</div>
             <p class="plan-hint">باقي 14 يوم على انتهاء الفترة التجريبية.</p>
-            <button class="btn btn-solid btn-block">ترقية الباقة</button>
+            <a href="request-demo.html" class="btn btn-solid btn-block">ترقية الباقة</a>
           </div>
         </aside>
 
@@ -769,6 +871,13 @@ h1,h2,h3{
   const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
 </script>
 
+
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 <script>
 
 /* ---- main.js ---- */
@@ -803,60 +912,202 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if a video URL is set
-// NOTE: reads from localStorage for now (placeholder until wired to Airtable
-// via the Worker); dashboard.js's "Company Video" panel writes this key.
-(function renderCompanyVideo() {
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
   const section = document.getElementById('videoShowcaseSection');
   const frame = document.getElementById('videoShowcaseFrame');
   if (!section || !frame) return;
 
-  const url = localStorage.getItem('ig_company_video_url');
-  if (!url) {
-    section.hidden = true;
-    return;
-  }
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
-  let embedUrl = url;
   try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    } else if (u.hostname === 'youtu.be') {
-      embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    } else if (u.hostname.includes('drive.google.com')) {
-      embedUrl = url.replace('/view', '/preview');
-    }
-  } catch { /* leave embedUrl as-is */ }
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
 
-  frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
-  section.hidden = false;
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
 })();
 
-/* ---- settings.js ---- */
-// Innovation Grid — company settings page logic
-// NOTE: forms currently show placeholder confirmations. Once the Worker is
-// deployed, these will PATCH the Companies/Users records in Airtable.
+/* ---- social-icons.js ---- */
+// Innovation Grid — shared contact-channel icon set
+// Simple original monoline icons (not copies of trademarked logos), used in
+// both the Settings "بيانات التواصل" panel and the public Contact page.
 
-function attachPlaceholderSubmit(formId, msgId, successText) {
-  const form = document.getElementById(formId);
-  const msg = document.getElementById(msgId);
-  if (!form) return;
-  form.addEventListener('submit', (e) => {
+const SOCIAL_ICONS = {
+  email: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>',
+  whatsapp: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l-3 1 1-3a7.5 7.5 0 1 1 2.5 2.5z"/><path d="M9 10c0 3 2 5 5 5"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h-2a2 2 0 0 0-2 2v10M9 13h4"/><circle cx="12" cy="12" r="9"/></svg>',
+  instagram: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="0.8" fill="currentColor" stroke="none"/></svg>',
+  x: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5L5 19"/></svg>',
+  threads: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4 0-7 3-7 8s3 10 7 10c3.5 0 6-2 6-5.5 0-2.5-1.8-4-4.5-4-2 0-3 1-3 2.3 0 1 .8 1.7 2 1.7"/></svg>',
+  linkedin: '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="8" y1="11" x2="8" y2="16"/><circle cx="8" cy="8" r="0.6" fill="currentColor" stroke="none"/><path d="M12 16v-3.2c0-1.2.9-1.8 2-1.8s2 .6 2 1.8V16"/></svg>',
+};
+
+const SOCIAL_LABELS = {
+  email: 'البريد الإلكتروني', whatsapp: 'واتساب', facebook: 'فيسبوك',
+  instagram: 'إنستجرام', x: 'إكس (تويتر)', threads: 'ثريدز', linkedin: 'لينكدإن',
+};
+
+// Populate every [data-icon] placeholder on the page (used in settings.html)
+document.querySelectorAll('[data-icon]').forEach((el) => {
+  const key = el.dataset.icon;
+  if (SOCIAL_ICONS[key]) el.innerHTML = SOCIAL_ICONS[key];
+});
+
+/* ---- settings.js ---- */
+// Innovation Grid — company settings page logic (live data via the Worker)
+
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+const COMPANY_ID = LOGGED_IN_USER?.companyId;
+
+// ---- Company profile ----
+const companyProfileForm = document.getElementById('companyProfileForm');
+const companyProfileMsg = document.getElementById('companyProfileMsg');
+
+async function loadCompanyProfile() {
+  if (!COMPANY_ID) return;
+  try {
+    const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`);
+    const company = await res.json();
+    if (companyProfileForm && company['Company Name']) {
+      companyProfileForm.querySelector('[name="companyName"]').value = company['Company Name'];
+    }
+  } catch { /* keep defaults */ }
+}
+loadCompanyProfile();
+
+if (companyProfileForm) {
+  companyProfileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    msg.textContent = successText;
-    msg.className = 'form-msg success';
+    const data = Object.fromEntries(new FormData(companyProfileForm));
+    try {
+      await fetch(`${API_BASE}/company/${COMPANY_ID}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyName: data.companyName }),
+      });
+      companyProfileMsg.textContent = 'تم حفظ بيانات الشركة.';
+      companyProfileMsg.className = 'form-msg success';
+    } catch {
+      companyProfileMsg.textContent = 'تعذّر حفظ البيانات.';
+      companyProfileMsg.className = 'form-msg error';
+    }
   });
 }
 
-attachPlaceholderSubmit('companyProfileForm', 'companyProfileMsg', 'سيتم حفظ بيانات الشركة فعليًا عند ربط المنصة بقاعدة البيانات.');
-attachPlaceholderSubmit('passwordChangeForm', 'passwordChangeMsg', 'سيتم تحديث كلمة المرور فعليًا عند ربط المنصة بقاعدة البيانات.');
+// ---- Password change ----
+const passwordChangeForm = document.getElementById('passwordChangeForm');
+const passwordChangeMsg = document.getElementById('passwordChangeMsg');
+if (passwordChangeForm) {
+  passwordChangeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(passwordChangeForm));
+    if (!data.currentPassword) {
+      passwordChangeMsg.textContent = 'حطي كلمة المرور الحالية عشان نأكد هويتك.';
+      passwordChangeMsg.className = 'form-msg error';
+      return;
+    }
+    if (data.newPassword !== data.confirmPassword) {
+      passwordChangeMsg.textContent = 'كلمتا المرور الجديدتين مش متطابقتين.';
+      passwordChangeMsg.className = 'form-msg error';
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/change-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: LOGGED_IN_USER?.id,
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        passwordChangeMsg.textContent = result.error || 'حصل خطأ';
+        passwordChangeMsg.className = 'form-msg error';
+        return;
+      }
+      passwordChangeMsg.textContent = 'تم تحديث كلمة المرور.';
+      passwordChangeMsg.className = 'form-msg success';
+      passwordChangeForm.reset();
+    } catch {
+      passwordChangeMsg.textContent = 'تعذّر تحديث كلمة المرور.';
+      passwordChangeMsg.className = 'form-msg error';
+    }
+  });
+}
 
 document.querySelector('.btn-danger')?.addEventListener('click', () => {
   if (confirm('متأكدة إنك عايزة تحذفي مساحة الشركة بالكامل؟ الإجراء ده لا يمكن التراجع عنه.')) {
-    alert('سيتم تفعيل حذف الشركة فعليًا عند ربط المنصة بقاعدة البيانات.');
+    alert('حذف الشركة نهائيًا محتاج تأكيد إضافي — هيتفعّل في نسخة قادمة.');
   }
 });
+
+// ---- Contact channels (now backed by Airtable via the Worker) ----
+const CONTACT_FIELD_MAP = {
+  email: 'contactEmail', whatsapp: 'contactWhatsapp', facebook: 'contactFacebook',
+  instagram: 'contactInstagram', x: 'contactX', threads: 'contactThreads', linkedin: 'contactLinkedin',
+};
+const CONTACT_AIRTABLE_MAP = {
+  email: 'Contact Email', whatsapp: 'Contact WhatsApp URL', facebook: 'Contact Facebook URL',
+  instagram: 'Contact Instagram URL', x: 'Contact X URL', threads: 'Contact Threads URL', linkedin: 'Contact LinkedIn URL',
+};
+const contactForm = document.getElementById('contactChannelsForm');
+const contactMsg = document.getElementById('contactChannelsMsg');
+
+async function loadContactChannels() {
+  if (!contactForm || !COMPANY_ID) return;
+  try {
+    const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`);
+    const company = await res.json();
+    Object.keys(CONTACT_AIRTABLE_MAP).forEach((key) => {
+      const input = contactForm.querySelector(`[name="${key}"]`);
+      const value = company[CONTACT_AIRTABLE_MAP[key]];
+      if (input && value) input.value = value;
+    });
+  } catch { /* keep blank */ }
+}
+loadContactChannels();
+
+if (contactForm) {
+  contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {};
+    Object.keys(CONTACT_FIELD_MAP).forEach((key) => {
+      payload[CONTACT_FIELD_MAP[key]] = contactForm.querySelector(`[name="${key}"]`).value.trim();
+    });
+    try {
+      await fetch(`${API_BASE}/company/${COMPANY_ID}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      contactMsg.textContent = 'تم حفظ بيانات التواصل، وهتظهر دلوقتي في صفحة تواصل معنا.';
+      contactMsg.className = 'form-msg success';
+    } catch {
+      contactMsg.textContent = 'تعذّر حفظ البيانات.';
+      contactMsg.className = 'form-msg error';
+    }
+  });
+}
 
 </script>
 </body>

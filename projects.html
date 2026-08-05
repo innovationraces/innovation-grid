@@ -11,6 +11,50 @@
 
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -476,6 +520,7 @@ h1,h2,h3{
 .filter-btn.is-active{ background: var(--ink); color: var(--paper); }
 .tag-list a{ display:block; padding: 7px 10px; border-radius:8px; font-size:14px; color: var(--slate); }
 .tag-list a:hover{ background: var(--paper-2); color: var(--ink); }
+.tag-list a.is-active{ background: var(--ink); color:#fff; }
 
 .feed-search input{
   width:100%; padding: 13px 16px; border-radius: 999px;
@@ -565,6 +610,7 @@ h1,h2,h3{
 
 .idea-form{ display:flex; flex-direction:column; gap:16px; }
 .idea-form label{ display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600; color: var(--ink); }
+.idea-form label[hidden]{ display:none; }
 .idea-form input, .idea-form select, .idea-form textarea{
   font-family: var(--font-body); font-size: 14.5px; font-weight:400;
   padding: 11px 14px; border-radius: 10px; border:1px solid var(--line);
@@ -632,6 +678,8 @@ h1,h2,h3{
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <div class="dash-shell">
 
@@ -653,7 +701,7 @@ h1,h2,h3{
 
     <nav class="dash-nav">
       <a href="dashboard.html" class="dash-nav-link"><span class="dash-nav-icon">▦</span> نظرة عامة</a>
-      <a href="#" class="dash-nav-link"><span class="dash-nav-icon">◈</span> الأفكار</a>
+      <a href="ideas.html" class="dash-nav-link"><span class="dash-nav-icon">◈</span> الأفكار</a>
       <a href="challenges.html" class="dash-nav-link"><span class="dash-nav-icon">◎</span> التحديات</a>
       <a href="projects.html" class="dash-nav-link is-active"><span class="dash-nav-icon">▤</span> المشاريع</a>
       <a href="signals.html" class="dash-nav-link"><span class="dash-nav-icon">◉</span> الإشارات والرادار</a>
@@ -732,6 +780,16 @@ h1,h2,h3{
 </div>
 
 <script>
+  const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
+</script>
+
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<script>
 
 /* ---- main.js ---- */
 // Innovation Grid — plain JS, no build step, works directly on GitHub Pages
@@ -765,118 +823,101 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if a video URL is set
-// NOTE: reads from localStorage for now (placeholder until wired to Airtable
-// via the Worker); dashboard.js's "Company Video" panel writes this key.
-(function renderCompanyVideo() {
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
   const section = document.getElementById('videoShowcaseSection');
   const frame = document.getElementById('videoShowcaseFrame');
   if (!section || !frame) return;
 
-  const url = localStorage.getItem('ig_company_video_url');
-  if (!url) {
-    section.hidden = true;
-    return;
-  }
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
-  let embedUrl = url;
   try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    } else if (u.hostname === 'youtu.be') {
-      embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    } else if (u.hostname.includes('drive.google.com')) {
-      embedUrl = url.replace('/view', '/preview');
-    }
-  } catch { /* leave embedUrl as-is */ }
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
 
-  frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
-  section.hidden = false;
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
 })();
 
 /* ---- projects.js ---- */
-// Innovation Grid — projects page logic
-// NOTE: project data below is placeholder for layout/testing.
-// Once the Cloudflare Worker + Airtable backend is wired, this will
-// pull real records from the "Projects" table.
+// Innovation Grid — projects page logic (live data via the Worker)
 
-const PROJECTS = [
-  {
-    name: 'نظام حجز قاعات الاجتماعات الذكي',
-    source: 'من فكرة: نظام حجز قاعات اجتماعات ذكي',
-    status: 'in-progress',
-    progress: 62,
-    budget: '85,000',
-    manager: 'خالد المطيري',
-  },
-  {
-    name: 'منصة تدوير المستلزمات المكتبية',
-    source: 'من فكرة: برنامج تدوير المستلزمات المكتبية',
-    status: 'planning',
-    progress: 12,
-    budget: '40,000',
-    manager: 'نورة القحطاني',
-  },
-  {
-    name: 'حل خفض هدر مياه الري',
-    source: 'من حل فائز: تحدي خفض هدر المياه',
-    status: 'in-progress',
-    progress: 45,
-    budget: '150,000',
-    manager: 'فهد العتيبي',
-  },
-  {
-    name: 'إعادة تصميم رحلة تأهيل الموظف الجديد',
-    source: 'من حل فائز: تحدي تحسين تجربة الموظف الجديد',
-    status: 'completed',
-    progress: 100,
-    budget: '60,000',
-    manager: 'سارة الدوسري',
-  },
-  {
-    name: 'لوحة متابعة استهلاك الطاقة بالفروع',
-    source: 'من فكرة: لوحة متابعة استهلاك الطاقة',
-    status: 'on-hold',
-    progress: 28,
-    budget: '95,000',
-    manager: 'عبدالله الشهري',
-  },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+const COMPANY_ID = LOGGED_IN_USER?.companyId;
 
-const STATUS_LABEL = { planning: 'قيد التخطيط', 'in-progress': 'قيد التنفيذ', completed: 'مكتمل', 'on-hold': 'متوقف مؤقتًا' };
+const STATUS_LABEL = { Planning: 'قيد التخطيط', 'In Progress': 'قيد التنفيذ', Completed: 'مكتمل', 'On Hold': 'متوقف مؤقتًا' };
+const STATUS_CLASS = { Planning: 'planning', 'In Progress': 'in-progress', Completed: 'completed', 'On Hold': 'on-hold' };
+const FILTER_TO_EN = { planning: 'Planning', 'in-progress': 'In Progress', completed: 'Completed', 'on-hold': 'On Hold' };
+
+let PROJECTS = [];
+const list = document.getElementById('projectList');
+let currentFilter = 'all';
+
+async function loadProjects() {
+  if (!COMPANY_ID) {
+    list.innerHTML = `<p style="color:var(--slate-2);">سجّلي دخولك عشان تشوفي مشاريع شركتك.</p>`;
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/projects?companyId=${COMPANY_ID}`);
+    const data = await res.json();
+    PROJECTS = data.records || [];
+    renderProjects();
+  } catch {
+    list.innerHTML = `<p style="color:#B42318;">تعذّر تحميل المشاريع.</p>`;
+  }
+}
 
 function projectRowHTML(p) {
+  const status = p.Status || 'Planning';
+  const progress = p['Progress %'] ? Math.round(p['Progress %'] * 100) : 0;
   return `
-    <div class="project-row" data-status="${p.status}">
+    <div class="project-row" data-status="${status}">
       <div class="project-info">
-        <h3>${p.name}</h3>
-        <span>${p.source} — مدير المشروع: ${p.manager}</span>
+        <h3>${p['Project Name'] || '—'}</h3>
+        <span>${p.Budget ? p.Budget.toLocaleString('ar-EG') + ' ريال' : 'مفيش ميزانية مُحددة'}</span>
       </div>
       <div class="project-progress">
-        <div class="bar-label"><span>نسبة الإنجاز</span><span>${p.progress}%</span></div>
-        <div class="status-bar-track"><div class="status-bar-fill" style="width:${p.progress}%;"></div></div>
+        <div class="bar-label"><span>نسبة الإنجاز</span><span>${progress}%</span></div>
+        <div class="status-bar-track"><div class="status-bar-fill" style="width:${progress}%;"></div></div>
       </div>
       <div class="project-budget">
-        ${p.budget} ريال
+        ${p.Budget ? p.Budget.toLocaleString('ar-EG') + ' ريال' : '—'}
         <span>الميزانية المعتمدة</span>
       </div>
-      <span class="project-status-pill ${p.status}">${STATUS_LABEL[p.status]}</span>
+      <span class="project-status-pill ${STATUS_CLASS[status]}">${STATUS_LABEL[status] || status}</span>
     </div>
   `;
 }
 
-const list = document.getElementById('projectList');
-let currentFilter = 'all';
-
 function renderProjects() {
-  const filtered = currentFilter === 'all' ? PROJECTS : PROJECTS.filter((p) => p.status === currentFilter);
+  const filtered = currentFilter === 'all' ? PROJECTS : PROJECTS.filter((p) => p.Status === FILTER_TO_EN[currentFilter]);
   list.innerHTML = filtered.length
     ? filtered.map(projectRowHTML).join('')
     : `<p style="color:var(--slate-2);">لا توجد مشاريع في هذا التصنيف حاليًا.</p>`;
 }
 
-if (list) renderProjects();
+if (list) loadProjects();
 
 document.querySelectorAll('.projects-filters .filter-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -897,10 +938,22 @@ overlay?.addEventListener('click', (e) => { if (e.target === overlay) overlay.hi
 const projectForm = document.getElementById('projectForm');
 const projectFormMsg = document.getElementById('projectFormMsg');
 if (projectForm) {
-  projectForm.addEventListener('submit', (e) => {
+  projectForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    projectFormMsg.textContent = 'سيتم إنشاء المشروع فعليًا عند ربط المنصة بقاعدة البيانات.';
-    projectFormMsg.className = 'form-msg success';
+    const data = Object.fromEntries(new FormData(projectForm));
+    try {
+      await fetch(`${API_BASE}/projects`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: data.name, companyId: COMPANY_ID, budget: data.budget }),
+      });
+      projectFormMsg.textContent = 'تم إنشاء المشروع بنجاح.';
+      projectFormMsg.className = 'form-msg success';
+      projectForm.reset();
+      loadProjects();
+    } catch {
+      projectFormMsg.textContent = 'تعذّر إنشاء المشروع.';
+      projectFormMsg.className = 'form-msg error';
+    }
   });
 }
 

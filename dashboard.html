@@ -10,6 +10,50 @@
 
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -565,6 +609,7 @@ h1,h2,h3{
 
 .idea-form{ display:flex; flex-direction:column; gap:16px; }
 .idea-form label{ display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600; color: var(--ink); }
+.idea-form label[hidden]{ display:none; }
 .idea-form input, .idea-form select, .idea-form textarea{
   font-family: var(--font-body); font-size: 14.5px; font-weight:400;
   padding: 11px 14px; border-radius: 10px; border:1px solid var(--line);
@@ -589,6 +634,8 @@ h1,h2,h3{
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <div class="dash-shell">
 
@@ -646,7 +693,7 @@ h1,h2,h3{
       </div>
       <div class="dash-topbar-actions">
         <button class="btn btn-ghost">+ دعوة موظف</button>
-        <button class="btn btn-solid">+ تحدي جديد</button>
+        <button class="btn btn-solid" id="openChallengeModal">+ تحدي جديد</button>
         <span class="avatar">م</span>
       </div>
     </header>
@@ -770,10 +817,51 @@ h1,h2,h3{
   </div>
 </div>
 
+<!-- New challenge modal -->
+<div class="modal-overlay" id="challengeModalOverlay" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="challengeModalTitle">
+    <div class="modal-head">
+      <h2 id="challengeModalTitle">تحدٍّ جديد</h2>
+      <button class="modal-close" id="closeChallengeModal" aria-label="إغلاق">×</button>
+    </div>
+    <form id="challengeForm" class="idea-form">
+      <label>
+        <span>عنوان التحدي</span>
+        <input type="text" name="title" required placeholder="عنوان مختصر وواضح">
+      </label>
+      <label>
+        <span>وصف المشكلة</span>
+        <textarea name="problemDescription" rows="4" required placeholder="اشرحي المشكلة المطلوب حلها"></textarea>
+      </label>
+      <div class="idea-form-row">
+        <label>
+          <span>الجائزة</span>
+          <input type="text" name="prize" placeholder="مثال: 50,000 ريال">
+        </label>
+        <label>
+          <span>تاريخ الإغلاق</span>
+          <input type="date" name="endDate">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelChallengeModal">إلغاء</button>
+        <button type="submit" class="btn btn-solid">نشر التحدي</button>
+      </div>
+      <p id="challengeFormMsg" class="form-msg" role="status"></p>
+    </form>
+  </div>
+</div>
+
 <script>
   const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
 </script>
 
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 <script>
 
 /* ---- main.js ---- */
@@ -808,114 +896,151 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if a video URL is set
-// NOTE: reads from localStorage for now (placeholder until wired to Airtable
-// via the Worker); dashboard.js's "Company Video" panel writes this key.
-(function renderCompanyVideo() {
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
   const section = document.getElementById('videoShowcaseSection');
   const frame = document.getElementById('videoShowcaseFrame');
   if (!section || !frame) return;
 
-  const url = localStorage.getItem('ig_company_video_url');
-  if (!url) {
-    section.hidden = true;
-    return;
-  }
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
-  let embedUrl = url;
   try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    } else if (u.hostname === 'youtu.be') {
-      embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    } else if (u.hostname.includes('drive.google.com')) {
-      embedUrl = url.replace('/view', '/preview');
-    }
-  } catch { /* leave embedUrl as-is */ }
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
 
-  frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
-  section.hidden = false;
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
 })();
 
 /* ---- dashboard.js ---- */
-// Innovation Grid — company dashboard logic
-// NOTE: all data below is placeholder for layout/testing.
-// Once the Cloudflare Worker + Airtable backend is wired, this will
-// pull real records scoped to the logged-in company.
+// Innovation Grid — company dashboard logic (live data)
+// Reads the logged-in user (with companyId) from localStorage, set at login.
+// Falls back to a friendly notice if the person isn't logged in yet.
 
-const IDEAS = [
-  { title: 'نظام حجز قاعات اجتماعات ذكي', dept: 'تقنية المعلومات', status: 'approved', date: '٢ أغسطس' },
-  { title: 'برنامج تدوير المستلزمات المكتبية', dept: 'الموارد البشرية', status: 'review', date: '١ أغسطس' },
-  { title: 'لوحة متابعة استهلاك الطاقة بالفروع', dept: 'العمليات', status: 'review', date: '٣٠ يوليو' },
-  { title: 'تطبيق داخلي لطلبات الصيانة', dept: 'المرافق', status: 'rejected', date: '٢٨ يوليو' },
-  { title: 'نظام تقييم أداء الموردين', dept: 'المشتريات', status: 'approved', date: '٢٦ يوليو' },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+const COMPANY_ID = LOGGED_IN_USER?.companyId;
 
-const STATUS_LABEL = { approved: 'مقبولة', review: 'تحت المراجعة', rejected: 'مرفوضة' };
+const STATUS_LABEL_AR = { Submitted: 'مُقدَّمة', 'Under Review': 'تحت المراجعة', Approved: 'مقبولة', Rejected: 'مرفوضة', Draft: 'مسودة' };
+const STATUS_CLASS = { Submitted: 'review', 'Under Review': 'review', Approved: 'approved', Rejected: 'rejected', Draft: 'review' };
 
-const tbody = document.getElementById('ideasTableBody');
-if (tbody) {
-  tbody.innerHTML = IDEAS.map((i) => `
-    <tr>
-      <td>${i.title}</td>
-      <td>${i.dept}</td>
-      <td><span class="status-pill ${i.status}">${STATUS_LABEL[i.status]}</span></td>
-      <td>${i.date}</td>
-    </tr>
-  `).join('');
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  if (!res.ok) throw new Error('request failed');
+  return res.json();
 }
 
-const CHALLENGES = [
-  { title: 'خفض هدر المياه في الري الزراعي', solutions: 14, deadline: 'يغلق خلال 6 أيام' },
-  { title: 'تسريع دورة اعتماد الفواتير الداخلية', solutions: 7, deadline: 'يغلق خلال 12 يوم' },
-  { title: 'تحسين تجربة الموظف الجديد (Onboarding)', solutions: 21, deadline: 'يغلق خلال 3 أيام' },
-];
+async function loadDashboard() {
+  const tbody = document.getElementById('ideasTableBody');
+  const dashChallengeList = document.getElementById('dashChallengeList');
 
-const dashChallengeList = document.getElementById('dashChallengeList');
-if (dashChallengeList) {
-  dashChallengeList.innerHTML = CHALLENGES.map((c) => `
-    <div class="dash-challenge-row">
-      <div>
-        <strong>${c.title}</strong>
-        <span>${c.deadline}</span>
-      </div>
-      <span class="count">${c.solutions} حل</span>
-    </div>
-  `).join('');
+  if (!COMPANY_ID) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--slate-2); padding:20px;">سجّلي دخولك عشان تشوفي بيانات شركتك.</td></tr>`;
+    if (dashChallengeList) dashChallengeList.innerHTML = `<p style="color:var(--slate-2);">سجّلي دخولك الأول.</p>`;
+    return;
+  }
+
+  try {
+    const [ideasRes, challengesRes, projectsRes] = await Promise.all([
+      apiGet(`/ideas?companyId=${COMPANY_ID}`),
+      apiGet(`/challenges?companyId=${COMPANY_ID}`),
+      apiGet(`/projects?companyId=${COMPANY_ID}`),
+    ]);
+
+    const ideas = ideasRes.records || [];
+    const challenges = challengesRes.records || [];
+    const projects = projectsRes.records || [];
+
+    const kpiValues = document.querySelectorAll('.kpi-value');
+    if (kpiValues[0]) kpiValues[0].textContent = ideas.length;
+    if (kpiValues[1]) kpiValues[1].textContent = challenges.filter((c) => c.Status === 'Open').length;
+    if (kpiValues[2]) kpiValues[2].textContent = projects.filter((p) => p.Status === 'In Progress').length;
+
+    if (tbody) {
+      const recent = ideas.slice(0, 5);
+      tbody.innerHTML = recent.length
+        ? recent.map((i) => `
+            <tr>
+              <td>${i.Title || '—'}</td>
+              <td>${i.Department || '—'}</td>
+              <td><span class="status-pill ${STATUS_CLASS[i.Status] || 'review'}">${STATUS_LABEL_AR[i.Status] || i.Status || '—'}</span></td>
+              <td>—</td>
+            </tr>
+          `).join('')
+        : `<tr><td colspan="4" style="text-align:center; color:var(--slate-2); padding:20px;">لسه مفيش أفكار مُقدَّمة.</td></tr>`;
+    }
+
+    if (dashChallengeList) {
+      const active = challenges.filter((c) => c.Status === 'Open');
+      dashChallengeList.innerHTML = active.length
+        ? active.map((c) => `
+            <div class="dash-challenge-row">
+              <div>
+                <strong>${c.Title || '—'}</strong>
+                <span>${c['End Date'] ? 'يغلق في ' + c['End Date'] : ''}</span>
+              </div>
+              <span class="count">${c.Status}</span>
+            </div>
+          `).join('')
+        : `<p style="color:var(--slate-2);">لا يوجد تحديات مفتوحة حاليًا.</p>`;
+    }
+
+    const statusBars = document.getElementById('statusBars');
+    if (statusBars && ideas.length) {
+      const counts = {};
+      ideas.forEach((i) => { counts[i.Status] = (counts[i.Status] || 0) + 1; });
+      const total = ideas.length;
+      const colorMap = { Approved: 'var(--teal)', 'Under Review': 'var(--gold)', Submitted: 'var(--gold)', Rejected: 'var(--slate-2)', Draft: 'var(--slate-2)' };
+      statusBars.innerHTML = Object.keys(counts).map((status) => {
+        const pct = Math.round((counts[status] / total) * 100);
+        return `
+          <div class="status-bar-row">
+            <div class="bar-label"><span>${STATUS_LABEL_AR[status] || status}</span><span>${pct}%</span></div>
+            <div class="status-bar-track"><div class="status-bar-fill" style="width:${pct}%; background:${colorMap[status] || 'var(--slate-2)'};"></div></div>
+          </div>
+        `;
+      }).join('');
+    } else if (statusBars) {
+      statusBars.innerHTML = `<p style="color:var(--slate-2); font-size:13px;">لسه مفيش بيانات كفاية.</p>`;
+    }
+
+    const deptRankList = document.getElementById('deptRankList');
+    if (deptRankList) {
+      const deptCounts = {};
+      ideas.forEach((i) => {
+        if (i.Department) deptCounts[i.Department] = (deptCounts[i.Department] || 0) + 1;
+      });
+      const ranked = Object.entries(deptCounts).sort((a, b) => b[1] - a[1]);
+      deptRankList.innerHTML = ranked.length
+        ? ranked.map(([name, count]) => `<li><span>${name}</span><span>${count} فكرة</span></li>`).join('')
+        : `<li style="color:var(--slate-2);">لسه مفيش أفكار بإدارة محددة.</li>`;
+    }
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#B42318; padding:20px;">تعذّر تحميل البيانات من الخادم.</td></tr>`;
+  }
 }
 
-const DEPTS = [
-  { name: 'تقنية المعلومات', count: 84 },
-  { name: 'العمليات', count: 61 },
-  { name: 'الموارد البشرية', count: 47 },
-  { name: 'المشتريات', count: 33 },
-];
+loadDashboard();
 
-const deptRankList = document.getElementById('deptRankList');
-if (deptRankList) {
-  deptRankList.innerHTML = DEPTS.map((d) => `<li><span>${d.name}</span><span>${d.count} فكرة</span></li>`).join('');
-}
-
-const STATUS_BARS = [
-  { label: 'مقبولة', pct: 42, color: 'var(--teal)' },
-  { label: 'تحت المراجعة', pct: 35, color: 'var(--gold)' },
-  { label: 'مرفوضة', pct: 23, color: 'var(--slate-2)' },
-];
-
-const statusBars = document.getElementById('statusBars');
-if (statusBars) {
-  statusBars.innerHTML = STATUS_BARS.map((s) => `
-    <div class="status-bar-row">
-      <div class="bar-label"><span>${s.label}</span><span>${s.pct}%</span></div>
-      <div class="status-bar-track">
-        <div class="status-bar-fill" style="width:${s.pct}%; background:${s.color};"></div>
-      </div>
-    </div>
-  `).join('');
-}
-
-// Sidebar nav active state (visual only for now — all views show the same overview)
 document.querySelectorAll('.dash-nav-link[data-view]').forEach((link) => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
@@ -924,50 +1049,41 @@ document.querySelectorAll('.dash-nav-link[data-view]').forEach((link) => {
   });
 });
 
-// ---- Company welcome video (Settings) ----
-// NOTE: stored in localStorage as a stand-in until the "Intro Video URL" field
-// on the Companies table is wired through the Worker. Same placeholder pattern
-// used across this project's other forms.
+// ---- Company welcome video (backed by Airtable via the Worker) ----
 function toEmbedUrl(rawUrl) {
   try {
     const u = new URL(rawUrl);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      return `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    }
-    if (u.hostname === 'youtu.be') {
-      return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    }
-    if (u.hostname.includes('drive.google.com')) {
-      return rawUrl.replace('/view', '/preview');
-    }
+    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) return `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+    if (u.hostname === 'youtu.be') return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+    if (u.hostname.includes('drive.google.com')) return rawUrl.replace('/view', '/preview');
     return rawUrl;
-  } catch {
-    return rawUrl;
-  }
+  } catch { return rawUrl; }
 }
 
 const videoPreview = document.getElementById('videoCurrentPreview');
 const companyVideoForm = document.getElementById('companyVideoForm');
 const companyVideoMsg = document.getElementById('companyVideoMsg');
-const VIDEO_STORAGE_KEY = 'ig_company_video_url';
 
-function renderVideoPreview() {
-  if (!videoPreview) return;
-  const url = localStorage.getItem(VIDEO_STORAGE_KEY);
-  if (url) {
-    videoPreview.innerHTML = `<div class="video-current-frame"><iframe src="${toEmbedUrl(url)}" allowfullscreen></iframe></div>`;
-  } else {
-    videoPreview.innerHTML = `<p class="video-empty-note">مفيش فيديو مضاف — قسم الفيديو مش هيظهر في صفحتك الرئيسية.</p>`;
+async function loadCompanyVideo() {
+  if (!videoPreview || !COMPANY_ID) return;
+  try {
+    const company = await apiGet(`/company/${COMPANY_ID}`);
+    const url = company['Intro Video URL'];
+    if (url) {
+      videoPreview.innerHTML = `<div class="video-current-frame"><iframe src="${toEmbedUrl(url)}" allowfullscreen></iframe></div>`;
+      if (companyVideoForm) companyVideoForm.querySelector('input[name="videoUrl"]').value = url;
+    } else {
+      videoPreview.innerHTML = `<p class="video-empty-note">مفيش فيديو مضاف — قسم الفيديو مش هيظهر في صفحتك الرئيسية.</p>`;
+    }
+  } catch {
+    videoPreview.innerHTML = `<p class="video-empty-note">تعذّر تحميل بيانات الفيديو.</p>`;
   }
 }
-renderVideoPreview();
+loadCompanyVideo();
 
 if (companyVideoForm) {
   const input = companyVideoForm.querySelector('input[name="videoUrl"]');
-  const existing = localStorage.getItem(VIDEO_STORAGE_KEY);
-  if (existing && input) input.value = existing;
-
-  companyVideoForm.addEventListener('submit', (e) => {
+  companyVideoForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const url = input.value.trim();
     if (!url) {
@@ -975,24 +1091,61 @@ if (companyVideoForm) {
       companyVideoMsg.className = 'form-msg error';
       return;
     }
-    localStorage.setItem(VIDEO_STORAGE_KEY, url);
-    renderVideoPreview();
+    await fetch(`${API_BASE}/company/${COMPANY_ID}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ introVideoUrl: url }),
+    });
+    loadCompanyVideo();
     companyVideoMsg.textContent = 'تم حفظ الفيديو، وهيظهر دلوقتي في صفحتك الرئيسية.';
     companyVideoMsg.className = 'form-msg success';
   });
 }
 
-document.getElementById('removeVideoBtn')?.addEventListener('click', () => {
-  localStorage.removeItem(VIDEO_STORAGE_KEY);
+document.getElementById('removeVideoBtn')?.addEventListener('click', async () => {
+  await fetch(`${API_BASE}/company/${COMPANY_ID}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ introVideoUrl: '' }),
+  });
   if (companyVideoForm) companyVideoForm.querySelector('input[name="videoUrl"]').value = '';
-  renderVideoPreview();
+  loadCompanyVideo();
   companyVideoMsg.textContent = 'تم حذف الفيديو، القسم مش هيظهر في صفحتك الرئيسية.';
   companyVideoMsg.className = 'form-msg success';
 });
 
+// ---- New challenge modal ----
+const challengeOverlay = document.getElementById('challengeModalOverlay');
+document.getElementById('openChallengeModal')?.addEventListener('click', () => { challengeOverlay.hidden = false; });
+document.getElementById('closeChallengeModal')?.addEventListener('click', () => { challengeOverlay.hidden = true; });
+document.getElementById('cancelChallengeModal')?.addEventListener('click', () => { challengeOverlay.hidden = true; });
+challengeOverlay?.addEventListener('click', (e) => { if (e.target === challengeOverlay) challengeOverlay.hidden = true; });
+
+const challengeForm = document.getElementById('challengeForm');
+const challengeFormMsg = document.getElementById('challengeFormMsg');
+if (challengeForm) {
+  challengeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(challengeForm));
+    try {
+      await fetch(`${API_BASE}/challenges`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title, problemDescription: data.problemDescription,
+          prize: data.prize, endDate: data.endDate, companyId: COMPANY_ID,
+        }),
+      });
+      challengeFormMsg.textContent = 'تم نشر التحدي بنجاح!';
+      challengeFormMsg.className = 'form-msg success';
+      challengeForm.reset();
+      loadDashboard();
+    } catch {
+      challengeFormMsg.textContent = 'تعذّر نشر التحدي.';
+      challengeFormMsg.className = 'form-msg error';
+    }
+  });
+}
+
 // ---- Invite employee modal ----
 const inviteOverlay = document.getElementById('inviteModalOverlay');
-document.getElementById('openInviteModal')?.addEventListener('click', () => { inviteOverlay.hidden = false; });
 document.querySelectorAll('.dash-topbar-actions .btn-ghost').forEach((btn) => {
   btn.addEventListener('click', () => { inviteOverlay.hidden = false; });
 });
@@ -1006,18 +1159,15 @@ if (inviteForm) {
   inviteForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(inviteForm));
-    // NOTE: companyId below is a placeholder — once login is wired, this should
-    // come from the logged-in company admin's session/company record.
-    const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || '{}');
     try {
       const res = await fetch(`${API_BASE}/invite-employee`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyId: loggedInUser.companyId || '',
+          companyId: COMPANY_ID || '',
           email: data.email,
           fullName: data.fullName,
           role: data.role,
-          invitedByName: loggedInUser.fullName || 'مدير الشركة',
+          invitedByName: LOGGED_IN_USER?.fullName || 'مدير الشركة',
         }),
       });
       const result = await res.json();

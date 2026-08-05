@@ -10,6 +10,50 @@
 
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -342,6 +386,7 @@ h1,h2,h3{
 .filter-btn.is-active{ background: var(--ink); color: var(--paper); }
 .tag-list a{ display:block; padding: 7px 10px; border-radius:8px; font-size:14px; color: var(--slate); }
 .tag-list a:hover{ background: var(--paper-2); color: var(--ink); }
+.tag-list a.is-active{ background: var(--ink); color:#fff; }
 
 .feed-search input{
   width:100%; padding: 13px 16px; border-radius: 999px;
@@ -431,6 +476,7 @@ h1,h2,h3{
 
 .idea-form{ display:flex; flex-direction:column; gap:16px; }
 .idea-form label{ display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600; color: var(--ink); }
+.idea-form label[hidden]{ display:none; }
 .idea-form input, .idea-form select, .idea-form textarea{
   font-family: var(--font-body); font-size: 14.5px; font-weight:400;
   padding: 11px 14px; border-radius: 10px; border:1px solid var(--line);
@@ -452,75 +498,11 @@ h1,h2,h3{
   .idea-form-row{ grid-template-columns: 1fr; }
 }
 
-/* ---- challenges.css ---- */
-.challenges-shell{ background: var(--paper-2); min-height: calc(100vh - 76px); padding: 40px 0 70px; }
-
-.challenges-head{ margin-bottom: 24px; }
-.challenges-head h1{ font-size: 30px; margin: 0; }
-
-.challenges-filters{ display:flex; gap:8px; margin-bottom: 24px; }
-.challenges-filters .filter-btn{
-  width:auto; padding: 9px 18px; border-radius: 999px;
-  background:#fff; border:1px solid var(--line);
-}
-.challenges-filters .filter-btn.is-active{ background: var(--ink); color:#fff; border-color: var(--ink); }
-
-.challenge-grid{
-  display:grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
-.challenge-card{
-  background:#fff; border:1px solid var(--line); border-radius: var(--radius);
-  padding: 22px; display:flex; flex-direction:column; gap:12px;
-  cursor:pointer; transition: border-color .15s ease, transform .15s ease;
-}
-.challenge-card:hover{ border-color: var(--gold); transform: translateY(-2px); }
-
-.challenge-status{
-  display:inline-flex; align-self:flex-start;
-  font-family: var(--font-mono); font-size:11px; text-transform:uppercase;
-  padding: 3px 10px; border-radius:999px; letter-spacing:.03em;
-}
-.challenge-status.open{ background:#ECFDF3; color:#067647; }
-.challenge-status.evaluating{ background:#FFF6E5; color:#B54708; }
-.challenge-status.closed{ background: var(--paper-2); color: var(--slate-2); }
-
-.challenge-card h3{ font-size:18px; margin:0; }
-.challenge-card p{ font-size:14px; color: var(--slate); margin:0; flex:1; }
-
-.challenge-card-foot{
-  display:flex; align-items:center; justify-content:space-between;
-  font-size:13px; color: var(--slate-2);
-  padding-top: 12px; border-top:1px solid var(--line);
-}
-.challenge-card-foot strong{ color: var(--ink); font-family: var(--font-mono); }
-
-/* Detail modal */
-.modal-card--wide{ max-width: 620px; }
-.challenge-detail-meta{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 16px; }
-.challenge-detail-body p{ font-size:14.5px; color: var(--slate); line-height:1.7; margin-bottom: 18px; }
-.challenge-detail-body h4{ font-size:14px; margin: 0 0 10px; }
-.criteria-list{ display:flex; flex-direction:column; gap:8px; margin: 0 0 24px; padding:0; list-style:none; }
-.criteria-list li{
-  font-size:14px; color: var(--slate); padding-inline-start:18px; position:relative;
-}
-.criteria-list li::before{
-  content:''; position:absolute; right:0; top:8px;
-  width:5px; height:5px; border-radius:50%; background: var(--gold);
-}
-
-@media (max-width: 900px){
-  .challenge-grid{ grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 600px){
-  .challenge-grid{ grid-template-columns: 1fr; }
-}
-
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <header class="site-header">
   <div class="wrap header-inner">
@@ -625,6 +607,16 @@ h1,h2,h3{
 </div>
 
 <script>
+  const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
+</script>
+
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<script>
 
 /* ---- main.js ---- */
 // Innovation Grid — plain JS, no build step, works directly on GitHub Pages
@@ -658,81 +650,91 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
+  const section = document.getElementById('videoShowcaseSection');
+  const frame = document.getElementById('videoShowcaseFrame');
+  if (!section || !frame) return;
+
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
+
+  try {
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
+
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
+})();
+
 /* ---- challenges.js ---- */
-// Innovation Grid — challenges page logic
-// NOTE: challenge data below is placeholder content for layout/testing.
-// Once the Cloudflare Worker + Airtable backend is wired, this will
-// fetch real records from the "Challenges" table instead.
+// Innovation Grid — public challenges page logic (live data via the Worker)
 
-const SAMPLE_CHALLENGES = [
-  {
-    id: 1,
-    status: 'open',
-    company: 'وزارة البيئة والمياه والزراعة',
-    title: 'خفض هدر المياه في الري الزراعي بحلول ذكية منخفضة التكلفة',
-    summary: 'نبحث عن حلول تقنية أو تشغيلية تقلل هدر المياه في المزارع الصغيرة والمتوسطة بأقل تكلفة تركيب ممكنة.',
-    description: 'المزارع الصغيرة والمتوسطة في المناطق الزراعية تفقد نسبة كبيرة من مياه الري بسبب أنظمة الري التقليدية وغياب أدوات القياس. المطلوب حل عملي (تقني أو تشغيلي) يمكن تطبيقه بتكلفة منخفضة، ويعطي نتيجة قابلة للقياس خلال موسم زراعي واحد.',
-    criteria: ['قابلية التطبيق الفعلي خلال 6 أشهر', 'التكلفة مقابل نسبة توفير المياه', 'سهولة التشغيل والصيانة من المزارع نفسه'],
-    prize: '150,000 ريال',
-    deadline: '30 سبتمبر',
-  },
-  {
-    id: 2,
-    status: 'open',
-    company: 'مجموعة صحية خاصة',
-    title: 'تقليل زمن انتظار المرضى في العيادات الخارجية',
-    summary: 'حل رقمي أو تشغيلي يقلل متوسط وقت انتظار المريض من لحظة الحجز حتى الكشف الفعلي.',
-    description: 'متوسط وقت الانتظار الحالي في العيادات الخارجية يتجاوز 40 دقيقة في أوقات الذروة. المطلوب حل يعالج جدولة المواعيد، أو تدفق المرضى داخل العيادة، أو كليهما، مع إمكانية تطبيقه على عدة فروع.',
-    criteria: ['الأثر المتوقع على متوسط وقت الانتظار', 'قابلية التوسع على عدة فروع', 'تجربة استخدام سهلة للموظفين والمرضى'],
-    prize: '200,000 ريال',
-    deadline: '15 أكتوبر',
-  },
-  {
-    id: 3,
-    status: 'evaluating',
-    company: 'أمانة منطقة',
-    title: 'منصة لتوثيق البلاغات البلدية بالصور مع تتبع الحالة',
-    summary: 'نظام يسمح للمواطن برفع بلاغ بلدي (حفرة، إنارة، نظافة) بصورة وموقع، ومتابعة حالة المعالجة.',
-    description: 'حاليًا البلاغات البلدية بتتبعت عبر قنوات متفرقة بدون تتبع موحد للحالة. المطلوب حل بيسمح للمواطن يرفع بلاغ بصورة وموقع جغرافي، ويتابع حالته، مع لوحة داخلية لفريق الأمانة لإدارة البلاغات وتوزيعها.',
-    criteria: ['سهولة الاستخدام للمواطن', 'وضوح تتبع الحالة', 'إمكانية الربط مع أنظمة الأمانة الحالية'],
-    prize: '180,000 ريال',
-    deadline: 'أُغلق التقديم — تحت التقييم',
-  },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
 
-function statusLabel(status) {
-  return { open: 'مفتوح', evaluating: 'تحت التقييم', closed: 'مغلق' }[status] || status;
+let CHALLENGES = [];
+const grid = document.getElementById('challengeGrid');
+let currentFilter = 'open';
+
+const STATUS_TO_EN = { open: 'Open', evaluating: 'Evaluating', closed: 'Closed' };
+const STATUS_LABEL = { Open: 'مفتوح', Evaluating: 'تحت التقييم', Closed: 'مغلق', Draft: 'مسودة' };
+
+async function loadChallenges() {
+  try {
+    const res = await fetch(`${API_BASE}/challenges`);
+    const data = await res.json();
+    CHALLENGES = data.records || [];
+    renderGrid();
+  } catch {
+    grid.innerHTML = `<p style="color:#B42318; grid-column:1/-1;">تعذّر تحميل التحديات.</p>`;
+  }
 }
 
 function challengeCardHTML(ch) {
   return `
     <article class="challenge-card" data-id="${ch.id}">
-      <span class="challenge-status ${ch.status}">${statusLabel(ch.status)}</span>
-      <h3>${ch.title}</h3>
-      <p>${ch.summary}</p>
+      <span class="challenge-status ${(ch.Status || '').toLowerCase()}">${STATUS_LABEL[ch.Status] || ch.Status || '—'}</span>
+      <h3>${ch.Title || '—'}</h3>
+      <p>${ch['Problem Description'] ? ch['Problem Description'].slice(0, 130) + '…' : ''}</p>
       <div class="challenge-card-foot">
-        <span>${ch.company}</span>
-        <strong>${ch.prize}</strong>
+        <span>&nbsp;</span>
+        <strong>${ch.Prize || '—'}</strong>
       </div>
     </article>
   `;
 }
 
-const grid = document.getElementById('challengeGrid');
-let currentFilter = 'open';
-
 function renderGrid() {
-  const filtered = SAMPLE_CHALLENGES.filter((c) => c.status === currentFilter);
+  const filtered = CHALLENGES.filter((c) => c.Status === STATUS_TO_EN[currentFilter]);
   grid.innerHTML = filtered.length
     ? filtered.map(challengeCardHTML).join('')
     : `<p style="color:var(--slate-2); grid-column:1/-1;">لا توجد تحديات في هذا التصنيف حاليًا.</p>`;
 
   grid.querySelectorAll('.challenge-card').forEach((card) => {
-    card.addEventListener('click', () => openDetail(Number(card.dataset.id)));
+    card.addEventListener('click', () => openDetail(card.dataset.id));
   });
 }
 
-if (grid) renderGrid();
+if (grid) loadChallenges();
 
 document.querySelectorAll('.challenges-filters .filter-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -746,16 +748,18 @@ document.querySelectorAll('.challenges-filters .filter-btn').forEach((btn) => {
 // ---- Detail modal ----
 const detailOverlay = document.getElementById('detailModalOverlay');
 const solutionOverlay = document.getElementById('solutionModalOverlay');
+let activeChallengeId = null;
 
 function openDetail(id) {
-  const ch = SAMPLE_CHALLENGES.find((c) => c.id === id);
+  const ch = CHALLENGES.find((c) => c.id === id);
   if (!ch) return;
-  document.getElementById('detailModalTitle').textContent = ch.title;
-  document.getElementById('detailCompany').textContent = ch.company;
-  document.getElementById('detailPrize').textContent = 'الجائزة: ' + ch.prize;
-  document.getElementById('detailDeadline').textContent = ch.deadline;
-  document.getElementById('detailDescription').textContent = ch.description;
-  document.getElementById('detailCriteria').innerHTML = ch.criteria.map((c) => `<li>${c}</li>`).join('');
+  activeChallengeId = id;
+  document.getElementById('detailModalTitle').textContent = ch.Title || '—';
+  document.getElementById('detailCompany').textContent = 'جهة صاحبة التحدي';
+  document.getElementById('detailPrize').textContent = 'الجائزة: ' + (ch.Prize || '—');
+  document.getElementById('detailDeadline').textContent = ch['End Date'] ? 'يغلق في ' + ch['End Date'] : '';
+  document.getElementById('detailDescription').textContent = ch['Problem Description'] || 'مفيش وصف مُضاف.';
+  document.getElementById('detailCriteria').innerHTML = '';
   detailOverlay.hidden = false;
 }
 
@@ -774,10 +778,29 @@ solutionOverlay?.addEventListener('click', (e) => { if (e.target === solutionOve
 const solutionForm = document.getElementById('solutionForm');
 const solutionFormMsg = document.getElementById('solutionFormMsg');
 if (solutionForm) {
-  solutionForm.addEventListener('submit', (e) => {
+  solutionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    solutionFormMsg.textContent = 'سيتم إرسال الحل فعليًا عند ربط المنصة بقاعدة البيانات.';
-    solutionFormMsg.className = 'form-msg success';
+    if (!LOGGED_IN_USER) {
+      solutionFormMsg.textContent = 'سجّلي دخولك الأول عشان تقدري تقدّمي حل.';
+      solutionFormMsg.className = 'form-msg error';
+      return;
+    }
+    const data = Object.fromEntries(new FormData(solutionForm));
+    try {
+      await fetch(`${API_BASE}/solutions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title, description: data.description,
+          challengeId: activeChallengeId, submittedByUserId: LOGGED_IN_USER.id,
+        }),
+      });
+      solutionFormMsg.textContent = 'تم إرسال حلك بنجاح!';
+      solutionFormMsg.className = 'form-msg success';
+      solutionForm.reset();
+    } catch {
+      solutionFormMsg.textContent = 'تعذّر إرسال الحل.';
+      solutionFormMsg.className = 'form-msg error';
+    }
   });
 }
 

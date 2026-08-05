@@ -9,6 +9,50 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
+/* Floating language switcher — wraps the Google Website Translator widget
+   so visitors can switch the whole site into any language. */
+.lang-switcher-wrap{
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(15,23,42,.12);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  direction: ltr;
+}
+.lang-switcher-wrap::before{
+  content: '🌐';
+  margin-left: 6px;
+  font-size: 13px;
+}
+#google_translate_element{ display:inline-block; vertical-align:middle; }
+#google_translate_element .goog-te-gadget{
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  color: #475467 !important;
+}
+#google_translate_element .goog-te-gadget > span{ display:none !important; }
+#google_translate_element .goog-te-gadget-simple{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.goog-te-gadget-icon{ display:none !important; }
+.goog-te-banner-frame{ display:none !important; }
+body{ top: 0 !important; }
+.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
+.goog-text-highlight{ background: none !important; box-shadow: none !important; }
+
+@media (max-width: 600px){
+  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
+}
+
+</style>
+<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -431,6 +475,7 @@ h1,h2,h3{
 
 .idea-form{ display:flex; flex-direction:column; gap:16px; }
 .idea-form label{ display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600; color: var(--ink); }
+.idea-form label[hidden]{ display:none; }
 .idea-form input, .idea-form select, .idea-form textarea{
   font-family: var(--font-body); font-size: 14.5px; font-weight:400;
   padding: 11px 14px; border-radius: 10px; border:1px solid var(--line);
@@ -455,6 +500,8 @@ h1,h2,h3{
 </style>
 </head>
 <body>
+<div id="google_translate_element" class="lang-switcher-wrap" aria-label="تغيير اللغة"></div>
+
 
 <header class="site-header">
   <div class="wrap header-inner">
@@ -569,6 +616,18 @@ h1,h2,h3{
           </select>
         </label>
       </div>
+      <label id="departmentField" hidden>
+        <span>الإدارة (لو بتقدّمي الفكرة كموظفة في شركة)</span>
+        <select name="department">
+          <option value="">بدون إدارة محددة</option>
+          <option>تقنية المعلومات</option>
+          <option>الموارد البشرية</option>
+          <option>العمليات</option>
+          <option>المشتريات</option>
+          <option>المرافق</option>
+          <option>أخرى</option>
+        </select>
+      </label>
       <label class="file-drop">
         <span>إرفاق ملفات أو صور (اختياري)</span>
         <input type="file" name="attachments" multiple>
@@ -582,6 +641,16 @@ h1,h2,h3{
   </div>
 </div>
 
+<script>
+  const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
+</script>
+
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 <script>
 
 /* ---- main.js ---- */
@@ -616,163 +685,177 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if a video URL is set
-// NOTE: reads from localStorage for now (placeholder until wired to Airtable
-// via the Worker); dashboard.js's "Company Video" panel writes this key.
-(function renderCompanyVideo() {
+// Company welcome video — show the section only if the logged-in user's
+// company has set one. Anonymous visitors see no video (no company context
+// exists yet for anonymous visitors without a slug/subdomain per company).
+(async function renderCompanyVideo() {
   const section = document.getElementById('videoShowcaseSection');
   const frame = document.getElementById('videoShowcaseFrame');
   if (!section || !frame) return;
 
-  const url = localStorage.getItem('ig_company_video_url');
-  if (!url) {
-    section.hidden = true;
-    return;
-  }
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
-  let embedUrl = url;
   try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
-    } else if (u.hostname === 'youtu.be') {
-      embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    } else if (u.hostname.includes('drive.google.com')) {
-      embedUrl = url.replace('/view', '/preview');
-    }
-  } catch { /* leave embedUrl as-is */ }
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const company = await res.json();
+    const url = company['Intro Video URL'];
+    if (!url) { section.hidden = true; return; }
 
-  frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
-  section.hidden = false;
+    let embedUrl = url;
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+        embedUrl = `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+      } else if (u.hostname === 'youtu.be') {
+        embedUrl = `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+      } else if (u.hostname.includes('drive.google.com')) {
+        embedUrl = url.replace('/view', '/preview');
+      }
+    } catch { /* leave embedUrl as-is */ }
+
+    frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen style="width:100%;height:100%;border:0;"></iframe>`;
+    section.hidden = false;
+  } catch {
+    section.hidden = true;
+  }
 })();
 
 /* ---- community.js ---- */
-// Innovation Grid — community feed logic
-// NOTE: idea data below is placeholder content for layout/testing.
-// Once the Cloudflare Worker + Airtable backend is wired, this will
-// fetch real records from the "Ideas" table instead.
+// Innovation Grid — community feed logic (live data via the Worker)
 
-const SAMPLE_IDEAS = [
-  {
-    author: 'سارة العتيبي',
-    initial: 'س',
-    time: 'منذ 3 ساعات',
-    title: 'تطبيق لإعادة تدوير مخلفات المطاعم لعلف الحيوان',
-    description: 'فكرة لتجميع مخلفات الطعام من المطاعم يوميًا وتحويلها لعلف حيواني معتمد، بالشراكة مع مزارع محلية.',
-    tags: ['استدامة', 'تقنية'],
-    likes: 128, comments: 24, saves: 40,
-  },
-  {
-    author: 'محمد الحربي',
-    initial: 'م',
-    time: 'منذ يوم',
-    title: 'منصة لربط الطلاب بفرص التدريب الصيفي في القطاع الحكومي',
-    description: 'حل يبسط عملية التقديم والمطابقة بين الطلاب والجهات الحكومية اللي محتاجة متدربين، بدل الطرق اليدوية الحالية.',
-    tags: ['تعليم', 'خدمات حكومية'],
-    likes: 96, comments: 18, saves: 31,
-  },
-  {
-    author: 'لمى الزهراني',
-    initial: 'ل',
-    time: 'منذ يومين',
-    title: 'نظام تنبيه مبكر لكبار السن يعتمد على أنماط الحركة داخل المنزل',
-    description: 'باستخدام حساسات بسيطة، النظام يتعلم الروتين اليومي وينبّه الأهل عند أي خروج واضح عن النمط المعتاد.',
-    tags: ['صحة', 'تقنية'],
-    likes: 210, comments: 47, saves: 88,
-  },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+
+let ALL_IDEAS = [];
+const ideaList = document.getElementById('ideaList');
+let activeTag = null;
+
+async function loadCommunityIdeas() {
+  try {
+    const res = await fetch(`${API_BASE}/ideas`);
+    const data = await res.json();
+    ALL_IDEAS = (data.records || []).filter((i) => i.Visibility === 'Public');
+    renderIdeaList();
+    renderLeaderboard();
+  } catch {
+    if (ideaList) ideaList.innerHTML = `<p style="color:#B42318;">تعذّر تحميل الأفكار.</p>`;
+  }
+}
 
 function ideaCardHTML(idea) {
-  const tagsHTML = idea.tags.map((t) => `<span class="idea-tag">${t}</span>`).join('');
   return `
     <article class="idea-card">
       <div class="idea-card-head">
-        <span class="idea-avatar">${idea.initial}</span>
-        <div class="idea-meta">
-          <strong>${idea.author}</strong><br>${idea.time}
-        </div>
+        <span class="idea-avatar">م</span>
+        <div class="idea-meta"><strong>عضو المجتمع</strong><br>—</div>
       </div>
-      <h3>${idea.title}</h3>
-      <p>${idea.description}</p>
-      <div>${tagsHTML}</div>
+      <h3>${idea.Title || '—'}</h3>
+      <p>${idea.Description || ''}</p>
       <div class="idea-actions">
-        <button class="idea-action">♡ ${idea.likes}</button>
-        <button class="idea-action">💬 ${idea.comments}</button>
+        <button class="idea-action">♡ 0</button>
+        <button class="idea-action">💬 0</button>
         <button class="idea-action">↗ مشاركة</button>
-        <button class="idea-action">⭑ ${idea.saves}</button>
+        <button class="idea-action">⭑ 0</button>
       </div>
     </article>
   `;
 }
 
-const ideaList = document.getElementById('ideaList');
-let activeTag = null;
-
 function renderIdeaList() {
   const q = (document.getElementById('ideaSearch')?.value || '').trim().toLowerCase();
-  const filtered = SAMPLE_IDEAS
-    .filter((idea) => !activeTag || idea.tags.includes(activeTag))
-    .filter((idea) => !q || idea.title.toLowerCase().includes(q) || idea.description.toLowerCase().includes(q));
+  const filtered = ALL_IDEAS.filter((idea) => !q || (idea.Title || '').toLowerCase().includes(q) || (idea.Description || '').toLowerCase().includes(q));
 
   ideaList.innerHTML = filtered.length
     ? filtered.map(ideaCardHTML).join('')
-    : `<p style="color:var(--slate-2);">لا توجد أفكار مطابقة.</p>`;
+    : `<p style="color:var(--slate-2);">لا توجد أفكار مطابقة بعد — كوني أول من يشارك فكرة!</p>`;
 }
 
-if (ideaList) renderIdeaList();
+function renderLeaderboard() {
+  const leaderboardList = document.getElementById('leaderboardList');
+  if (!leaderboardList) return;
+  leaderboardList.innerHTML = ALL_IDEAS.slice(0, 5)
+    .map((idea) => `<li>${(idea.Title || '').slice(0, 34)}</li>`)
+    .join('') || `<li style="color:var(--slate-2);">لسه مفيش أفكار.</li>`;
+}
+
+if (ideaList) loadCommunityIdeas();
 
 document.getElementById('ideaSearch')?.addEventListener('input', renderIdeaList);
+
+// Sidebar filters (Trending/Latest work on the real feed; Followed/Saved need
+// a following/saves relation that doesn't exist in Airtable yet)
+document.querySelectorAll('#filterList .filter-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#filterList .filter-btn').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    const mode = btn.dataset.filter;
+    if (mode === 'followed' || mode === 'saved') {
+      ideaList.innerHTML = `<p style="color:var(--slate-2);">ميزة "${btn.textContent}" لسه مش متاحة، هتتفعّل قريبًا.</p>`;
+    } else {
+      renderIdeaList();
+    }
+  });
+});
 
 document.querySelectorAll('#tagList a').forEach((tagLink) => {
   tagLink.addEventListener('click', (e) => {
     e.preventDefault();
-    const tag = tagLink.dataset.tag;
-    activeTag = activeTag === tag ? null : tag; // click again to clear
+    // NOTE: category/tag filtering needs a Category field on Ideas, which
+    // doesn't exist in Airtable yet — visual toggle only for now.
     document.querySelectorAll('#tagList a').forEach((a) => a.classList.remove('is-active'));
-    if (activeTag) tagLink.classList.add('is-active');
-    renderIdeaList();
+    tagLink.classList.toggle('is-active');
   });
 });
 
-const leaderboardList = document.getElementById('leaderboardList');
-if (leaderboardList) {
-  leaderboardList.innerHTML = [...SAMPLE_IDEAS]
-    .sort((a, b) => b.likes - a.likes)
-    .map((idea) => `<li>${idea.title.slice(0, 34)}${idea.title.length > 34 ? '…' : ''}</li>`)
-    .join('');
-}
-
-// Filter buttons (visual state only for now)
-document.querySelectorAll('.filter-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach((b) => b.classList.remove('is-active'));
-    btn.classList.add('is-active');
-  });
-});
-
-// Modal open/close
+// ---- Submit idea modal ----
 const overlay = document.getElementById('ideaModalOverlay');
 const openBtn = document.getElementById('openIdeaModal');
 const closeBtn = document.getElementById('closeIdeaModal');
 const cancelBtn = document.getElementById('cancelIdeaModal');
 
-function openModal() { overlay.hidden = false; }
+function openModal() {
+  if (!LOGGED_IN_USER) {
+    alert('سجّلي دخولك الأول عشان تقدري تشاركي فكرة.');
+    window.location.href = 'login.html';
+    return;
+  }
+  const deptField = document.getElementById('departmentField');
+  if (deptField) deptField.hidden = !LOGGED_IN_USER.companyId;
+  overlay.hidden = false;
+}
 function closeModal() { overlay.hidden = true; }
 
 if (openBtn) openBtn.addEventListener('click', openModal);
 if (closeBtn) closeBtn.addEventListener('click', closeModal);
 if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-if (overlay) {
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
-}
+if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
 
 const ideaForm = document.getElementById('ideaForm');
 const ideaFormMsg = document.getElementById('ideaFormMsg');
 if (ideaForm) {
-  ideaForm.addEventListener('submit', (e) => {
+  ideaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    ideaFormMsg.textContent = 'سيتم حفظ الفكرة فعليًا عند ربط المنصة بقاعدة البيانات.';
-    ideaFormMsg.className = 'form-msg success';
+    const data = Object.fromEntries(new FormData(ideaForm));
+    try {
+      await fetch(`${API_BASE}/ideas`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          visibility: data.visibility === 'private' ? 'Private' : 'Public',
+          companyId: LOGGED_IN_USER?.companyId || undefined,
+          ownerId: LOGGED_IN_USER?.id,
+          department: data.department || undefined,
+        }),
+      });
+      ideaFormMsg.textContent = 'تم نشر فكرتك بنجاح!';
+      ideaFormMsg.className = 'form-msg success';
+      ideaForm.reset();
+      loadCommunityIdeas();
+    } catch {
+      ideaFormMsg.textContent = 'تعذّر نشر الفكرة.';
+      ideaFormMsg.className = 'form-msg error';
+    }
   });
 }
 
