@@ -9,50 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
-/* Floating language switcher — wraps the Google Website Translator widget
-   so visitors can switch the whole site into any language. */
-.lang-switcher-wrap{
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  z-index: 999;
-  background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  padding: 6px 12px;
-  box-shadow: 0 4px 16px rgba(15,23,42,.12);
-  font-family: 'IBM Plex Sans Arabic', sans-serif;
-  direction: ltr;
-}
-.lang-switcher-wrap::before{
-  content: '🌐';
-  margin-left: 6px;
-  font-size: 13px;
-}
-#google_translate_element{ display:inline-block; vertical-align:middle; }
-#google_translate_element .goog-te-gadget{
-  font-family: inherit !important;
-  font-size: 12.5px !important;
-  color: #475467 !important;
-}
-#google_translate_element .goog-te-gadget > span{ display:none !important; }
-#google_translate_element .goog-te-gadget-simple{
-  background: none !important;
-  border: none !important;
-  padding: 0 !important;
-}
-.goog-te-gadget-icon{ display:none !important; }
-.goog-te-banner-frame{ display:none !important; }
-body{ top: 0 !important; }
-.goog-tooltip, .goog-tooltip:hover{ box-shadow: none !important; }
-.goog-text-highlight{ background: none !important; box-shadow: none !important; }
-
-@media (max-width: 600px){
-  .lang-switcher-wrap{ bottom: 12px; left: 12px; padding: 5px 10px; }
-}
-
-</style>
-<style>
 
 /* ---- style.css ---- */
 /* ==========================================================
@@ -446,6 +402,24 @@ h1,h2,h3{
   .values-grid, .feature-detail-grid, .pricing-grid, .story-grid{ grid-template-columns: 1fr; }
 }
 
+/* ---- lang-switcher.css ---- */
+/* Language switcher — a plain, fully-styleable select (opens the page via
+   Google Translate's proxy), instead of the unstyleable widget iframe. */
+#langSwitcher{ display:inline-flex; align-items:center; margin-inline-start: 10px; }
+.lang-select{
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 13px;
+  color: #475467;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  max-width: 120px;
+}
+.lang-select:hover{ border-color: #94A3B8; }
+.lang-select:focus{ outline: 2px solid #2563EB; outline-offset: 1px; }
+
 </style>
 </head>
 <body>
@@ -477,7 +451,7 @@ h1,h2,h3{
       <a href="register.html" class="btn btn-solid">إنشاء حساب</a>
     </div>
   </div>
-<div id="google_translate_element" class="lang-switcher-header" aria-label="تغيير اللغة"></div>
+<div id="langSwitcher"></div>
 </header>
 
 <main>
@@ -572,12 +546,6 @@ h1,h2,h3{
   </div>
 </footer>
 <script>
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({ pageLanguage: 'ar', autoDisplay: false }, 'google_translate_element');
-  }
-</script>
-<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
-<script>
 
 /* ---- main.js ---- */
 // Innovation Grid — plain JS, no build step, works directly on GitHub Pages
@@ -646,6 +614,66 @@ revealTargets.forEach((el) => observer.observe(el));
     section.hidden = true;
   }
 })();
+
+/* ---- lang-switcher.js ---- */
+// Innovation Grid — language switcher
+// Opens the current page through Google Translate's translation proxy in the
+// chosen language. This avoids the Website Translator widget entirely, since
+// most of that widget renders inside a cross-origin iframe we cannot restyle.
+
+const LANGUAGES = [
+  ['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['de', 'Deutsch'],
+  ['it', 'Italiano'], ['pt', 'Português'], ['ru', 'Русский'], ['tr', 'Türkçe'],
+  ['zh-CN', '中文 (简体)'], ['zh-TW', '中文 (繁體)'], ['ja', '日本語'], ['ko', '한국어'],
+  ['hi', 'हिन्दी'], ['ur', 'اردو'], ['fa', 'فارسی'], ['he', 'עברית'],
+  ['nl', 'Nederlands'], ['sv', 'Svenska'], ['no', 'Norsk'], ['da', 'Dansk'],
+  ['fi', 'Suomi'], ['pl', 'Polski'], ['cs', 'Čeština'], ['el', 'Ελληνικά'],
+  ['ro', 'Română'], ['hu', 'Magyar'], ['uk', 'Українська'], ['vi', 'Tiếng Việt'],
+  ['th', 'ไทย'], ['id', 'Bahasa Indonesia'], ['ms', 'Bahasa Melayu'],
+  ['bn', 'বাংলা'], ['ta', 'தமிழ்'], ['sw', 'Kiswahili'], ['am', 'አማርኛ'],
+  ['ha', 'Hausa'], ['so', 'Soomaali'], ['pa', 'ਪੰਜਾਬੀ'], ['ml', 'മലയാളം'],
+  ['te', 'తెలుగు'], ['mr', 'मराठी'], ['gu', 'ગુજરાતી'], ['si', 'සිංහල'],
+  ['km', 'ខ្មែរ'], ['my', 'မြန်မာ'], ['ne', 'नेपाली'], ['az', 'Azərbaycan'],
+  ['kk', 'Қазақ'], ['uz', 'Oʻzbek'], ['ka', 'ქართული'], ['hy', 'Հայերեն'],
+  ['bg', 'Български'], ['sr', 'Српски'], ['hr', 'Hrvatski'], ['sk', 'Slovenčina'],
+  ['sl', 'Slovenščina'], ['lt', 'Lietuvių'], ['lv', 'Latviešu'], ['et', 'Eesti'],
+  ['sq', 'Shqip'], ['mk', 'Македонски'], ['is', 'Íslenska'], ['ga', 'Gaeilge'],
+  ['sw', 'Kiswahili'], ['zu', 'isiZulu'], ['xh', 'isiXhosa'], ['af', 'Afrikaans'],
+];
+
+function buildLangSwitcher() {
+  const container = document.getElementById('langSwitcher');
+  if (!container) return;
+
+  const select = document.createElement('select');
+  select.className = 'lang-select';
+  select.setAttribute('aria-label', 'تغيير اللغة');
+
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = '🌐 اللغة';
+  select.appendChild(defaultOpt);
+
+  LANGUAGES.forEach(([code, name]) => {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = name;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener('change', () => {
+    const lang = select.value;
+    if (!lang) return;
+    const currentUrl = window.location.href;
+    const translateUrl = `https://translate.google.com/translate?sl=ar&tl=${lang}&u=${encodeURIComponent(currentUrl)}`;
+    window.open(translateUrl, '_blank', 'noopener');
+    select.value = '';
+  });
+
+  container.appendChild(select);
+}
+
+buildLangSwitcher();
 
 </script>
 </body>
