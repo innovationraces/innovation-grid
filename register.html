@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إنشاء حساب — Innovation Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+
+/* ---- style.css ---- */
+/* ==========================================================
+   Innovation Grid — Design tokens (professional / enterprise SaaS)
+   Palette: Slate Ink / near-white Paper / Corporate Blue / Teal / Indigo
+   Type: IBM Plex Sans Arabic throughout (display + body), IBM Plex Mono for data
+   ========================================================== */
+
+:root{
+  --ink:      #0F172A;
+  --ink-2:    #1E293B;
+  --paper:    #FFFFFF;
+  --paper-2:  #F4F6F9;
+  --gold:     #2563EB;   /* primary brand blue */
+  --gold-2:   #1D4ED8;   /* primary blue, darker */
+  --teal:     #0E9384;
+  --teal-2:   #0C7A6B;
+  --violet:   #4F46E5;
+  --slate:    #475467;
+  --slate-2:  #94A3B8;
+  --line:     #E2E8F0;
+  --line-dark:rgba(248,250,252,0.14);
+
+  --font-display: 'IBM Plex Sans Arabic', sans-serif;
+  --font-body: 'IBM Plex Sans Arabic', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --radius: 10px;
+  --wrap: 1180px;
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+body{
+  margin:0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img{ max-width:100%; display:block; }
+a{ color: inherit; text-decoration:none; }
+ul{ margin:0; padding:0; list-style:none; }
+
+.wrap{
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+h1,h2,h3{
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0 0 .5em;
+}
+
+.eyebrow{
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: .04em;
+  color: var(--gold-2);
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+.eyebrow.center{ text-align:center; }
+.section-title{ font-size: clamp(26px, 3.4vw, 40px); }
+.section-title.center{ text-align:center; max-width: 640px; margin-inline:auto; margin-bottom: 52px; }
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14.5px;
+  border: 1px solid transparent;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  white-space: nowrap;
+}
+.btn-solid{
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn-solid:hover{ transform: translateY(-2px); box-shadow: 0 10px 24px rgba(11,18,38,.22); }
+.btn-ghost{
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+.btn-ghost:hover{ background: var(--paper-2); }
+.btn-text{ font-weight:600; color: var(--teal-2); }
+.btn-lg{ padding: 14px 28px; font-size: 15.5px; }
+
+/* ---------- Header ---------- */
+.site-header{
+  position: sticky; top:0; z-index: 50;
+  background: rgba(247,245,239,.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.header-inner{
+  display:flex; align-items:center; justify-content:space-between;
+  height: 76px;
+  gap: 24px;
+}
+.brand{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.brand-mark circle{ animation: brandPulse 2.4s ease-in-out infinite; }
+.brand-mark circle:nth-child(2){ animation-delay:.25s; }
+.brand-mark circle:nth-child(3){ animation-delay:.5s; }
+@keyframes brandPulse{
+  0%, 100%{ opacity:1; }
+  50%{ opacity:.5; }
+}
+@media (prefers-reduced-motion: reduce){
+  .brand-mark circle{ animation:none; }
+}
+.brand-name{
+  font-family: var(--font-display);
+  font-size: 20px; font-weight:600;
+  letter-spacing: -.01em;
+}
+.brand-accent{ color: var(--teal); }
+
+.main-nav{ display:flex; gap: 28px; }
+.main-nav a{ font-size: 14.5px; font-weight:500; color: var(--slate); }
+.main-nav a:hover{ color: var(--ink); }
+
+.header-actions{ display:flex; align-items:center; gap: 12px; }
+
+.nav-toggle{
+  display:none;
+  flex-direction:column; gap:5px;
+  background:none; border:none; cursor:pointer; padding:6px;
+}
+.nav-toggle span{ width:22px; height:2px; background: var(--ink); display:block; }
+
+/* ---------- Hero ---------- */
+.hero{ padding: 76px 0 40px; overflow: hidden; }
+.hero-inner{
+  display:block;
+  max-width: 720px;
+}
+.hero h1{
+  font-size: clamp(36px, 5vw, 58px);
+  letter-spacing: -.01em;
+}
+.hero-lead{
+  font-size: 17px;
+  color: var(--slate);
+  max-width: 560px;
+  margin: 18px 0 32px;
+}
+.hero-ctas{ display:flex; align-items:center; gap: 22px; margin-bottom: 44px; }
+
+.hero-stats{
+  display:flex; gap: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.hero-stats strong{
+  display:block;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  color: var(--ink);
+}
+.hero-stats span{ font-size: 13px; color: var(--slate-2); }
+
+/* ---------- Logos strip ---------- */
+.logos-strip{ padding: 32px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.logos-strip p{ text-align:center; font-size: 13px; color: var(--slate-2); margin: 0 0 18px; }
+.logos-row{
+  display:flex; justify-content:center; gap: 40px; flex-wrap:wrap;
+  font-family: var(--font-display); font-size: 17px; color: var(--slate-2);
+}
+
+/* ---------- Sections ---------- */
+.section{ padding: 92px 0; }
+
+/* Systems */
+.systems-grid{
+  display:grid; grid-template-columns: 1fr 1fr; gap: 24px;
+}
+.system-card{
+  padding: 40px;
+  border-radius: var(--radius);
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.system-card--dark{
+  background: var(--ink);
+  color: var(--paper);
+  border-color: transparent;
+}
+.system-tag{
+  display:inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--slate);
+  margin-bottom: 18px;
+}
+.system-card--dark .system-tag{ background: rgba(247,245,239,.1); color: var(--paper); }
+.system-card h3{ font-size: 24px; }
+.system-card p{ color: var(--slate); margin-bottom: 20px; }
+.system-card--dark p{ color: rgba(247,245,239,.75); }
+.system-card ul{ margin-bottom: 24px; display:flex; flex-direction:column; gap:10px; }
+.system-card ul li{ font-size: 14.5px; padding-inline-start: 20px; position:relative; }
+.system-card ul li::before{
+  content:''; position:absolute; right:0; top:9px;
+  width:6px; height:6px; border-radius:50%; background: var(--gold);
+}
+.link-arrow{ font-weight:600; font-size:14.5px; color: var(--teal-2); }
+.system-card--dark .link-arrow{ color: var(--gold); }
+
+/* How it works */
+.howitworks{ background: var(--paper-2); }
+.steps-row{
+  display:grid; grid-template-columns: repeat(4,1fr); gap: 28px;
+}
+.step-glyph{
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--gold-2);
+  display:block; margin-bottom: 14px;
+}
+.step h3{ font-size: 18.5px; }
+.step p{ font-size: 14.5px; color: var(--slate); }
+
+/* Features */
+.features-grid{
+  display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+}
+.feature-card{
+  padding: 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #fff;
+  transition: border-color .18s ease, transform .18s ease;
+}
+.feature-card:hover{ border-color: var(--teal); transform: translateY(-3px); }
+.feature-card h3{ font-size: 17px; margin-bottom: 8px; }
+.feature-card p{ font-size: 14px; color: var(--slate); margin:0; }
+
+/* Video showcase */
+.video-showcase{ background: var(--paper-2); }
+.video-frame{
+  max-width: 860px; margin: 0 auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  aspect-ratio: 16/9;
+}
+.video-frame video{ width:100%; height:100%; display:block; object-fit: cover; }
+
+/* CTA band */
+.cta-band{
+  background: var(--ink);
+  color: var(--paper);
+  padding: 76px 0;
+}
+.cta-inner{ text-align:center; }
+.cta-inner h2{ font-size: clamp(26px,3.2vw,36px); color: var(--paper); }
+.cta-inner p{ color: rgba(247,245,239,.7); margin-bottom: 28px; }
+.cta-band .btn-solid{ background: var(--gold); color: #fff; }
+
+/* ---------- Footer ---------- */
+.site-footer{ background: var(--ink); color: var(--paper); padding-top: 60px; }
+.footer-grid{
+  display:grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid var(--line-dark);
+}
+.footer-brand p{ color: rgba(247,245,239,.6); font-size:14px; margin-top:10px; max-width:260px; }
+.footer-col h4{ font-family: var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:.04em; color: var(--slate-2); margin-bottom: 16px; }
+.footer-col a{ display:block; font-size:14.5px; color: rgba(247,245,239,.8); margin-bottom: 12px; }
+.footer-col a:hover{ color: var(--gold); }
+.footer-bottom{ padding: 22px 28px; font-size:13px; color: var(--slate-2); }
+
+/* ---------- Reveal on scroll ---------- */
+.reveal{ opacity:0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.is-visible{ opacity:1; transform:none; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px){
+  .main-nav{ display:none; }
+  .nav-toggle{ display:flex; }
+  .systems-grid{ grid-template-columns: 1fr; }
+  .steps-row{ grid-template-columns: 1fr 1fr; }
+  .features-grid{ grid-template-columns: 1fr 1fr; }
+  .footer-grid{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px){
+  .steps-row{ grid-template-columns: 1fr; }
+  .features-grid{ grid-template-columns: 1fr; }
+  .footer-grid{ grid-template-columns: 1fr; }
+  .hero-stats{ flex-wrap:wrap; row-gap:16px; }
+}
+
+/* ---- auth.css ---- */
+.auth-shell{
+  min-height: calc(100vh - 76px);
+  display:flex; align-items:center; justify-content:center;
+  padding: 60px 20px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(245,166,35,.08), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(14,124,123,.08), transparent 40%),
+    var(--paper-2);
+}
+.auth-card{
+  width: 100%; max-width: 420px;
+  background:#fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+}
+.auth-card--wide{ max-width: 480px; }
+.auth-card h1{ font-size: 28px; margin-bottom: 8px; }
+.auth-sub{ color: var(--slate); font-size: 14.5px; margin-bottom: 28px; }
+
+.auth-form{ display:flex; flex-direction:column; gap: 16px; }
+.auth-form label{ display:flex; flex-direction:column; gap:6px; font-size: 13.5px; font-weight:600; color: var(--ink); }
+.auth-form input[type="text"],
+.auth-form input[type="email"],
+.auth-form input[type="password"],
+.auth-form select,
+.auth-form textarea{
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 400;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+.auth-form input:focus,
+.auth-form select:focus,
+.auth-form textarea:focus{
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.checkbox-row{ flex-direction:row !important; align-items:center; gap:8px !important; font-weight:400 !important; font-size:14px !important; }
+.checkbox-row input{ width:16px; height:16px; }
+
+.auth-row{ display:flex; align-items:center; justify-content:space-between; margin-top:-6px; }
+.auth-link{ color: var(--teal-2); font-weight:600; font-size:13.5px; }
+
+.btn-block{ width:100%; justify-content:center; margin-top: 6px; }
+
+.form-msg{ font-size:13.5px; min-height: 18px; margin:0; }
+.form-msg.success{ color: var(--teal-2); }
+.form-msg.error{ color: #c0392b; }
+
+.auth-divider{
+  display:flex; align-items:center; gap:12px;
+  margin: 26px 0 18px;
+  color: var(--slate-2); font-size:12.5px;
+}
+.auth-divider::before, .auth-divider::after{
+  content:''; flex:1; height:1px; background: var(--line);
+}
+
+.auth-switch{ text-align:center; font-size:14px; color: var(--slate); margin: 8px 0 0; }
+.auth-switch a{ color: var(--teal-2); font-weight:600; }
+
+/* Account type toggle (register) */
+.account-type-toggle{
+  display:flex; gap:6px; padding:4px;
+  background: var(--paper-2); border-radius: 999px;
+  margin-bottom: 28px;
+}
+.type-btn{
+  flex:1; padding: 10px 14px; border-radius: 999px;
+  border:none; background:transparent; cursor:pointer;
+  font-family: var(--font-body); font-weight:600; font-size: 13.5px;
+  color: var(--slate); transition: background .18s ease, color .18s ease;
+}
+.type-btn.is-active{ background:#fff; color: var(--ink); box-shadow: 0 2px 8px rgba(11,18,38,.08); }
+
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="30" height="30">
+          <circle cx="8" cy="20" r="4" fill="var(--gold)"/>
+          <path d="M12 20 L22 20" stroke="var(--teal)" stroke-width="2" stroke-dasharray="1 5" stroke-linecap="round"/>
+          <path d="M22 20 L32 10 M22 20 L32 20 M22 20 L32 30" stroke="var(--teal)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <circle cx="32" cy="10" r="2.5" fill="var(--violet)"/>
+          <circle cx="32" cy="20" r="2.5" fill="var(--violet)"/>
+          <circle cx="32" cy="30" r="2.5" fill="var(--violet)"/>
+        </svg>
+      </span>
+      <span class="brand-name">Innovation<span class="brand-accent">Grid</span></span>
+    </a>
+    <a href="index.html" class="btn btn-ghost">العودة للرئيسية</a>
+  </div>
+</header>
+
+<main class="auth-shell">
+  <div class="auth-card auth-card--wide">
+    <p class="eyebrow">انضم للمنصة</p>
+    <h1>إنشاء حساب جديد</h1>
+
+    <div class="account-type-toggle" id="accountTypeToggle" role="tablist">
+      <button type="button" class="type-btn is-active" data-type="individual" role="tab" aria-selected="true">
+        مبتكر فردي
+      </button>
+      <button type="button" class="type-btn" data-type="company" role="tab" aria-selected="false">
+        شركة / جهة
+      </button>
+    </div>
+
+    <!-- Individual form -->
+    <form id="individualForm" class="auth-form" novalidate>
+      <label>
+        <span>الاسم الكامل</span>
+        <input type="text" name="fullName" required placeholder="اسمك بالكامل">
+      </label>
+      <label>
+        <span>البريد الإلكتروني</span>
+        <input type="email" name="email" required placeholder="name@example.com" autocomplete="email">
+      </label>
+      <label>
+        <span>كلمة المرور</span>
+        <input type="password" name="password" required placeholder="8 أحرف على الأقل" autocomplete="new-password">
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="terms" required>
+        <span>أوافق على <a href="terms.html" class="auth-link">الشروط والأحكام</a></span>
+      </label>
+      <button type="submit" class="btn btn-solid btn-lg btn-block">إنشاء الحساب</button>
+      <p id="individualMsg" class="form-msg" role="status"></p>
+    </form>
+
+    <!-- Company form -->
+    <form id="companyForm" class="auth-form" novalidate hidden>
+      <label>
+        <span>اسم الشركة / الجهة</span>
+        <input type="text" name="companyName" required placeholder="اسم الجهة الرسمي">
+      </label>
+      <label>
+        <span>اسم المسؤول</span>
+        <input type="text" name="contactName" required placeholder="اسم مسؤول التواصل">
+      </label>
+      <label>
+        <span>البريد الإلكتروني الرسمي</span>
+        <input type="email" name="companyEmail" required placeholder="name@company.com" autocomplete="email">
+      </label>
+      <label>
+        <span>كلمة المرور</span>
+        <input type="password" name="companyPassword" required placeholder="8 أحرف على الأقل" autocomplete="new-password">
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="companyTerms" required>
+        <span>أوافق على <a href="terms.html" class="auth-link">الشروط والأحكام</a></span>
+      </label>
+      <button type="submit" class="btn btn-solid btn-lg btn-block">إنشاء مساحة الشركة</button>
+      <p id="companyMsg" class="form-msg" role="status"></p>
+    </form>
+
+    <p class="auth-switch">
+      عندك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a>
+    </p>
+  </div>
+</main>
+
+<script>
+  const API_BASE = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev';
+</script>
+
+<script>
+
+/* ---- main.js ---- */
+// Innovation Grid — plain JS, no build step, works directly on GitHub Pages
+
+// Mobile nav toggle
+const navToggle = document.getElementById('navToggle');
+const mainNav = document.getElementById('mainNav');
+if (navToggle && mainNav) {
+  navToggle.addEventListener('click', () => {
+    const isOpen = mainNav.classList.toggle('is-open');
+    navToggle.setAttribute('aria-expanded', String(isOpen));
+  });
+}
+
+// Scroll reveal for sections
+const revealTargets = document.querySelectorAll(
+  '.system-card, .step, .feature-card, .section-title, .hero-copy'
+);
+revealTargets.forEach((el) => el.classList.add('reveal'));
+
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  },
+  { threshold: 0.15 }
+);
+revealTargets.forEach((el) => observer.observe(el));
+
+/* ---- auth-api.js ---- */
+// Innovation Grid — real auth API calls (replaces the old placeholder auth.js)
+// Requires a page-level `const API_BASE = '...'` pointing at the deployed Worker.
+
+function showMsg(el, text, ok) {
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'form-msg ' + (ok ? 'success' : 'error');
+}
+
+// ---- Register: individual/company toggle (unchanged UI logic) ----
+const toggle = document.getElementById('accountTypeToggle');
+if (toggle) {
+  const individualForm = document.getElementById('individualForm');
+  const companyForm = document.getElementById('companyForm');
+  const buttons = toggle.querySelectorAll('.type-btn');
+
+  function setType(type) {
+    buttons.forEach((b) => {
+      const active = b.dataset.type === type;
+      b.classList.toggle('is-active', active);
+      b.setAttribute('aria-selected', String(active));
+    });
+    individualForm.hidden = type !== 'individual';
+    companyForm.hidden = type !== 'company';
+  }
+  buttons.forEach((b) => b.addEventListener('click', () => setType(b.dataset.type)));
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('type') === 'company') setType('company');
+}
+
+// ---- Login ----
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('loginMsg');
+    const data = Object.fromEntries(new FormData(loginForm));
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      });
+      const result = await res.json();
+      if (!res.ok) return showMsg(msg, result.error || 'حصل خطأ', false);
+      localStorage.setItem('ig_user', JSON.stringify(result.user));
+      showMsg(msg, 'تم تسجيل الدخول، جارٍ التحويل…', true);
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+    } catch (err) {
+      showMsg(msg, 'تعذّر الاتصال بالخادم', false);
+    }
+  });
+}
+
+// ---- Register: individual ----
+const individualForm = document.getElementById('individualForm');
+if (individualForm) {
+  individualForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('individualMsg');
+    const data = Object.fromEntries(new FormData(individualForm));
+    try {
+      const res = await fetch(`${API_BASE}/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: data.fullName, email: data.email, password: data.password, role: 'Community User' }),
+      });
+      const result = await res.json();
+      if (!res.ok) return showMsg(msg, result.error || 'حصل خطأ', false);
+      showMsg(msg, 'تم إنشاء الحساب! راجعي بريدك الإلكتروني لتأكيده.', true);
+      individualForm.reset();
+    } catch (err) {
+      showMsg(msg, 'تعذّر الاتصال بالخادم', false);
+    }
+  });
+}
+
+// ---- Register: company ----
+const companyForm = document.getElementById('companyForm');
+if (companyForm) {
+  companyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('companyMsg');
+    const data = Object.fromEntries(new FormData(companyForm));
+    try {
+      const res = await fetch(`${API_BASE}/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: data.contactName, email: data.companyEmail, password: data.companyPassword,
+          companyName: data.companyName,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) return showMsg(msg, result.error || 'حصل خطأ', false);
+      showMsg(msg, 'تم إنشاء مساحة الشركة! راجعي بريدك الإلكتروني لتأكيده.', true);
+      companyForm.reset();
+    } catch (err) {
+      showMsg(msg, 'تعذّر الاتصال بالخادم', false);
+    }
+  });
+}
+
+// ---- Forgot password ----
+const forgotForm = document.getElementById('forgotForm');
+if (forgotForm) {
+  forgotForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('forgotMsg');
+    const data = Object.fromEntries(new FormData(forgotForm));
+    try {
+      const res = await fetch(`${API_BASE}/forgot-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+      await res.json();
+      showMsg(msg, 'لو الإيميل ده مسجل عندنا، هيوصلك رابط استرجاع.', true);
+      forgotForm.reset();
+    } catch (err) {
+      showMsg(msg, 'تعذّر الاتصال بالخادم', false);
+    }
+  });
+}
+
+// ---- Reset password ----
+const resetForm = document.getElementById('resetForm');
+if (resetForm) {
+  resetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('resetMsg');
+    const data = Object.fromEntries(new FormData(resetForm));
+    if (data.password !== data.confirmPassword) return showMsg(msg, 'كلمتا المرور غير متطابقتين', false);
+    const token = new URLSearchParams(window.location.search).get('token');
+    try {
+      const res = await fetch(`${API_BASE}/reset-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: data.password }),
+      });
+      const result = await res.json();
+      if (!res.ok) return showMsg(msg, result.error || 'حصل خطأ', false);
+      showMsg(msg, 'تم حفظ كلمة المرور! جارٍ التحويل لتسجيل الدخول…', true);
+      setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+    } catch (err) {
+      showMsg(msg, 'تعذّر الاتصال بالخادم', false);
+    }
+  });
+}
+
+// ---- Verify email (runs automatically on page load) ----
+const verifyTitle = document.getElementById('verifyTitle');
+if (verifyTitle) {
+  (async () => {
+    const token = new URLSearchParams(window.location.search).get('token');
+    const msgEl = document.getElementById('verifyMsg');
+    const loginBtn = document.getElementById('verifyLoginBtn');
+    if (!token) {
+      verifyTitle.textContent = 'رابط غير صالح';
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/verify-email?token=${encodeURIComponent(token)}`);
+      const result = await res.json();
+      if (res.ok) {
+        verifyTitle.textContent = 'تم تأكيد بريدك الإلكتروني ✓';
+        msgEl.textContent = 'تقدري تسجّلي الدخول دلوقتي.';
+        loginBtn.style.display = 'flex';
+      } else {
+        verifyTitle.textContent = 'تعذّر تأكيد البريد الإلكتروني';
+        msgEl.textContent = result.error || 'الرابط غير صالح أو منتهي.';
+      }
+    } catch (err) {
+      verifyTitle.textContent = 'تعذّر الاتصال بالخادم';
+    }
+  })();
+}
+
+// ---- Accept invite ----
+const acceptInviteForm = document.getElementById('acceptInviteForm');
+if (acceptInviteForm) {
+  acceptInviteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('acceptInviteMsg');
+    const data = Object.fromEntries(new FormData(acceptInviteForm));
+    if (data.password !== data.confirmPassword) return showMsg(msg, 'كلمتا المرور غير متطابقتين', false);
+    const token = new URLSearchParams(window.location.search).get('token');
+    try {
+      const res = await fetch(`${API_BASE}/accept-invite`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password: data.password }),
+      });
+      const result = await res.json();
+      if (!res.ok) return showMsg(msg, result.error || 'حصل خطأ', false);
+      showMsg(msg, 'تم تفعيل حسابك! جارٍ التحويل لتسجيل الدخول…', true);
+      setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+    } catch (err) {
+      showMsg(msg, 'تعذّر الاتصال بالخادم', false);
+    }
+  });
+}
+
+</script>
+</body>
+</html>
