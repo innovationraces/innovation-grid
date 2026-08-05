@@ -313,24 +313,6 @@ h1,h2,h3{
   .hero-stats{ flex-wrap:wrap; row-gap:16px; }
 }
 
-/* ---- lang-switcher.css ---- */
-/* Language switcher — a plain, fully-styleable select (opens the page via
-   Google Translate's proxy), instead of the unstyleable widget iframe. */
-#langSwitcher{ display:inline-flex; align-items:center; margin-inline-start: 10px; }
-.lang-select{
-  font-family: 'IBM Plex Sans Arabic', sans-serif;
-  font-size: 13px;
-  color: #475467;
-  background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
-  max-width: 120px;
-}
-.lang-select:hover{ border-color: #94A3B8; }
-.lang-select:focus{ outline: 2px solid #2563EB; outline-offset: 1px; }
-
 </style>
 </head>
 <body>
@@ -600,7 +582,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -612,7 +619,7 @@ revealTargets.forEach((el) => observer.observe(el));
   if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
   try {
-    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
     const company = await res.json();
     const url = company['Intro Video URL'];
     if (!url) { section.hidden = true; return; }
@@ -635,66 +642,6 @@ revealTargets.forEach((el) => observer.observe(el));
     section.hidden = true;
   }
 })();
-
-/* ---- lang-switcher.js ---- */
-// Innovation Grid — language switcher
-// Opens the current page through Google Translate's translation proxy in the
-// chosen language. This avoids the Website Translator widget entirely, since
-// most of that widget renders inside a cross-origin iframe we cannot restyle.
-
-const LANGUAGES = [
-  ['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['de', 'Deutsch'],
-  ['it', 'Italiano'], ['pt', 'Português'], ['ru', 'Русский'], ['tr', 'Türkçe'],
-  ['zh-CN', '中文 (简体)'], ['zh-TW', '中文 (繁體)'], ['ja', '日本語'], ['ko', '한국어'],
-  ['hi', 'हिन्दी'], ['ur', 'اردو'], ['fa', 'فارسی'], ['he', 'עברית'],
-  ['nl', 'Nederlands'], ['sv', 'Svenska'], ['no', 'Norsk'], ['da', 'Dansk'],
-  ['fi', 'Suomi'], ['pl', 'Polski'], ['cs', 'Čeština'], ['el', 'Ελληνικά'],
-  ['ro', 'Română'], ['hu', 'Magyar'], ['uk', 'Українська'], ['vi', 'Tiếng Việt'],
-  ['th', 'ไทย'], ['id', 'Bahasa Indonesia'], ['ms', 'Bahasa Melayu'],
-  ['bn', 'বাংলা'], ['ta', 'தமிழ்'], ['sw', 'Kiswahili'], ['am', 'አማርኛ'],
-  ['ha', 'Hausa'], ['so', 'Soomaali'], ['pa', 'ਪੰਜਾਬੀ'], ['ml', 'മലയാളം'],
-  ['te', 'తెలుగు'], ['mr', 'मराठी'], ['gu', 'ગુજરાતી'], ['si', 'සිංහල'],
-  ['km', 'ខ្មែរ'], ['my', 'မြန်မာ'], ['ne', 'नेपाली'], ['az', 'Azərbaycan'],
-  ['kk', 'Қазақ'], ['uz', 'Oʻzbek'], ['ka', 'ქართული'], ['hy', 'Հայերեն'],
-  ['bg', 'Български'], ['sr', 'Српски'], ['hr', 'Hrvatski'], ['sk', 'Slovenčina'],
-  ['sl', 'Slovenščina'], ['lt', 'Lietuvių'], ['lv', 'Latviešu'], ['et', 'Eesti'],
-  ['sq', 'Shqip'], ['mk', 'Македонски'], ['is', 'Íslenska'], ['ga', 'Gaeilge'],
-  ['sw', 'Kiswahili'], ['zu', 'isiZulu'], ['xh', 'isiXhosa'], ['af', 'Afrikaans'],
-];
-
-function buildLangSwitcher() {
-  const container = document.getElementById('langSwitcher');
-  if (!container) return;
-
-  const select = document.createElement('select');
-  select.className = 'lang-select';
-  select.setAttribute('aria-label', 'تغيير اللغة');
-
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = '🌐 اللغة';
-  select.appendChild(defaultOpt);
-
-  LANGUAGES.forEach(([code, name]) => {
-    const opt = document.createElement('option');
-    opt.value = code;
-    opt.textContent = name;
-    select.appendChild(opt);
-  });
-
-  select.addEventListener('change', () => {
-    const lang = select.value;
-    if (!lang) return;
-    const currentUrl = window.location.href;
-    const translateUrl = `https://translate.google.com/translate?sl=ar&tl=${lang}&u=${encodeURIComponent(currentUrl)}`;
-    window.open(translateUrl, '_blank', 'noopener');
-    select.value = '';
-  });
-
-  container.appendChild(select);
-}
-
-buildLangSwitcher();
 
 </script>
 </body>

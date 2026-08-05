@@ -897,7 +897,7 @@ revealTargets.forEach((el) => observer.observe(el));
     }
     if (typeof API_BASE === 'undefined') return;
     try {
-      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
       const company = await res.json();
       tag.textContent = company['Company Name'] || '';
     } catch {
@@ -916,7 +916,7 @@ revealTargets.forEach((el) => observer.observe(el));
   if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
   try {
-    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
     const company = await res.json();
     const url = company['Intro Video URL'];
     if (!url) { section.hidden = true; return; }
@@ -979,7 +979,7 @@ const companyProfileMsg = document.getElementById('companyProfileMsg');
 async function loadCompanyProfile() {
   if (!COMPANY_ID) return;
   try {
-    const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`);
+    const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`, { cache: 'no-store' });
     const company = await res.json();
     if (companyProfileForm) {
       if (company['Company Name']) companyProfileForm.querySelector('[name="companyName"]').value = company['Company Name'];
@@ -1076,7 +1076,7 @@ const contactMsg = document.getElementById('contactChannelsMsg');
 async function loadContactChannels() {
   if (!contactForm || !COMPANY_ID) return;
   try {
-    const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`);
+    const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`, { cache: 'no-store' });
     const company = await res.json();
     Object.keys(CONTACT_AIRTABLE_MAP).forEach((key) => {
       const input = contactForm.querySelector(`[name="${key}"]`);

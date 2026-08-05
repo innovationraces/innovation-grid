@@ -669,7 +669,7 @@ revealTargets.forEach((el) => observer.observe(el));
     }
     if (typeof API_BASE === 'undefined') return;
     try {
-      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
       const company = await res.json();
       tag.textContent = company['Company Name'] || '';
     } catch {
@@ -688,7 +688,7 @@ revealTargets.forEach((el) => observer.observe(el));
   if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
   try {
-    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
     const company = await res.json();
     const url = company['Intro Video URL'];
     if (!url) { section.hidden = true; return; }
@@ -723,7 +723,7 @@ let activeTag = null;
 
 async function loadCommunityIdeas() {
   try {
-    const res = await fetch(`${API_BASE}/ideas`);
+    const res = await fetch(`${API_BASE}/ideas`, { cache: 'no-store' });
     const data = await res.json();
     ALL_IDEAS = (data.records || []).filter((i) => i.Visibility === 'Public');
     renderIdeaList();

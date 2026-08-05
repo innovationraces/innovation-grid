@@ -654,7 +654,7 @@ revealTargets.forEach((el) => observer.observe(el));
     }
     if (typeof API_BASE === 'undefined') return;
     try {
-      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
       const company = await res.json();
       tag.textContent = company['Company Name'] || '';
     } catch {
@@ -673,7 +673,7 @@ revealTargets.forEach((el) => observer.observe(el));
   if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
   try {
-    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
     const company = await res.json();
     const url = company['Intro Video URL'];
     if (!url) { section.hidden = true; return; }
@@ -718,9 +718,9 @@ async function loadAnalytics() {
 
   try {
     const [ideasRes, challengesRes, projectsRes] = await Promise.all([
-      fetch(`${API_BASE}/ideas?companyId=${COMPANY_ID}`).then((r) => r.json()),
-      fetch(`${API_BASE}/challenges?companyId=${COMPANY_ID}`).then((r) => r.json()),
-      fetch(`${API_BASE}/projects?companyId=${COMPANY_ID}`).then((r) => r.json()),
+      fetch(`${API_BASE}/ideas?companyId=${COMPANY_ID}`, { cache: 'no-store' }).then((r) => r.json()),
+      fetch(`${API_BASE}/challenges?companyId=${COMPANY_ID}`, { cache: 'no-store' }).then((r) => r.json()),
+      fetch(`${API_BASE}/projects?companyId=${COMPANY_ID}`, { cache: 'no-store' }).then((r) => r.json()),
     ]);
     const ideas = ideasRes.records || [];
     const challenges = challengesRes.records || [];

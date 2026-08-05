@@ -638,7 +638,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -650,7 +675,7 @@ revealTargets.forEach((el) => observer.observe(el));
   if (!loggedInUser?.companyId) { section.hidden = true; return; }
 
   try {
-    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
     const company = await res.json();
     const url = company['Intro Video URL'];
     if (!url) { section.hidden = true; return; }
@@ -744,7 +769,7 @@ attachPlaceholderSubmit('demoForm', 'demoMsg', 'تم استلام طلبك! فر
 
   let company = {};
   try {
-    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+    const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`, { cache: 'no-store' });
     company = await res.json();
   } catch { /* fall through to empty state */ }
 
