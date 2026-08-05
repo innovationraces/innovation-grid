@@ -476,6 +476,7 @@ h1,h2,h3{
 .filter-btn.is-active{ background: var(--ink); color: var(--paper); }
 .tag-list a{ display:block; padding: 7px 10px; border-radius:8px; font-size:14px; color: var(--slate); }
 .tag-list a:hover{ background: var(--paper-2); color: var(--ink); }
+.tag-list a.is-active{ background: var(--ink); color:#fff; }
 
 .feed-search input{
   width:100%; padding: 13px 16px; border-radius: 999px;
@@ -643,7 +644,7 @@ h1,h2,h3{
 
     <nav class="dash-nav">
       <a href="dashboard.html" class="dash-nav-link"><span class="dash-nav-icon">▦</span> نظرة عامة</a>
-      <a href="#" class="dash-nav-link"><span class="dash-nav-icon">◈</span> الأفكار</a>
+      <a href="ideas.html" class="dash-nav-link"><span class="dash-nav-icon">◈</span> الأفكار</a>
       <a href="challenges.html" class="dash-nav-link"><span class="dash-nav-icon">◎</span> التحديات</a>
       <a href="projects.html" class="dash-nav-link"><span class="dash-nav-icon">▤</span> المشاريع</a>
       <a href="signals.html" class="dash-nav-link"><span class="dash-nav-icon">◉</span> الإشارات والرادار</a>
@@ -732,7 +733,7 @@ h1,h2,h3{
 </div>
 
 <script>
-  const API_BASE = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev';
+  const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
 </script>
 
 <script>
