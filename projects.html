@@ -690,12 +690,12 @@ h1,h2,h3{
   <div class="dash-main">
     <header class="dash-topbar">
       <div>
-        <p class="dash-company-tag">شركة سُبل الرياض القابضة</p>
+        <p class="dash-company-tag"></p>
         <h1>المشاريع</h1>
       </div>
       <div class="dash-topbar-actions">
         <button class="btn btn-solid" id="openProjectModal">+ مشروع جديد</button>
-        <span class="avatar">م</span>
+        <span class="avatar"></span>
       </div>
     <div id="langSwitcher"></div>
 </header>
@@ -789,7 +789,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {

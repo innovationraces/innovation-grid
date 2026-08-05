@@ -692,11 +692,11 @@ h1,h2,h3{
   <div class="dash-main">
     <header class="dash-topbar">
       <div>
-        <p class="dash-company-tag">شركة سُبل الرياض القابضة</p>
+        <p class="dash-company-tag"></p>
         <h1>إعدادات الشركة</h1>
       </div>
       <div class="dash-topbar-actions">
-        <span class="avatar">م</span>
+        <span class="avatar"></span>
       </div>
     <div id="langSwitcher"></div>
 </header>
@@ -719,23 +719,25 @@ h1,h2,h3{
               </div>
               <label>
                 <span>اسم الشركة</span>
-                <input type="text" name="companyName" value="شركة سُبل الرياض القابضة">
+                <input type="text" name="companyName" placeholder="اسم شركتك">
               </label>
               <div class="idea-form-row">
                 <label>
                   <span>القطاع</span>
                   <select name="sector">
+                    <option value="">اختاري القطاع</option>
                     <option>حكومي</option>
                     <option>خاص</option>
-                    <option selected>قابضة / مجموعة شركات</option>
+                    <option>قابضة / مجموعة شركات</option>
                     <option>تعليمي</option>
                   </select>
                 </label>
                 <label>
                   <span>حجم الشركة</span>
                   <select name="size">
+                    <option value="">اختاري حجم الشركة</option>
                     <option>أقل من 50 موظف</option>
-                    <option selected>50 - 250 موظف</option>
+                    <option>50 - 250 موظف</option>
                     <option>250 - 1000 موظف</option>
                     <option>أكثر من 1000 موظف</option>
                   </select>
@@ -828,8 +830,7 @@ h1,h2,h3{
         <aside class="settings-side">
           <div class="dash-panel plan-panel">
             <h3>الباقة الحالية</h3>
-            <div class="plan-badge">Trial — تجريبية</div>
-            <p class="plan-hint">باقي 14 يوم على انتهاء الفترة التجريبية.</p>
+            <div class="plan-badge" id="planBadge">—</div>
             <a href="request-demo.html" class="btn btn-solid btn-block">ترقية الباقة</a>
           </div>
         </aside>
@@ -878,7 +879,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -955,8 +981,15 @@ async function loadCompanyProfile() {
   try {
     const res = await fetch(`${API_BASE}/company/${COMPANY_ID}`);
     const company = await res.json();
-    if (companyProfileForm && company['Company Name']) {
-      companyProfileForm.querySelector('[name="companyName"]').value = company['Company Name'];
+    if (companyProfileForm) {
+      if (company['Company Name']) companyProfileForm.querySelector('[name="companyName"]').value = company['Company Name'];
+      if (company['Sector']) companyProfileForm.querySelector('[name="sector"]').value = company['Sector'];
+      if (company['Company Size']) companyProfileForm.querySelector('[name="size"]').value = company['Company Size'];
+    }
+    const planBadge = document.getElementById('planBadge');
+    if (planBadge) {
+      const statusLabel = { Trial: 'تجريبية', Active: 'نشطة', Suspended: 'معلّقة' };
+      planBadge.textContent = `${company['Plan'] || 'Free'} — ${statusLabel[company['Subscription Status']] || company['Subscription Status'] || '—'}`;
     }
   } catch { /* keep defaults */ }
 }
@@ -969,7 +1002,7 @@ if (companyProfileForm) {
     try {
       await fetch(`${API_BASE}/company/${COMPANY_ID}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName: data.companyName }),
+        body: JSON.stringify({ companyName: data.companyName, sector: data.sector, companySize: data.size }),
       });
       companyProfileMsg.textContent = 'تم حفظ بيانات الشركة.';
       companyProfileMsg.className = 'form-msg success';

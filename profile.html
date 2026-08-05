@@ -537,17 +537,17 @@ h1,h2,h3{
     <section class="profile-header">
       <span class="profile-avatar">م</span>
       <div class="profile-header-info">
-        <h1 id="profileName">مستخدم Innovation Grid</h1>
-        <p id="profileBio">مبتكرة مهتمة بحلول الاستدامة والتقنية. عضوة في المجتمع منذ 2026.</p>
+        <h1 id="profileName">جارٍ التحميل…</h1>
+        <p id="profileBio"></p>
         <div class="profile-skills" id="profileSkills"></div>
       </div>
       <button class="btn btn-ghost" id="editProfileBtn">تعديل الملف الشخصي</button>
     </section>
 
     <div class="profile-stats">
-      <div><strong>7</strong><span>أفكار منشورة</span></div>
-      <div><strong>142</strong><span>متابع</span></div>
-      <div><strong>38</strong><span>متابَعون</span></div>
+      <div><strong>—</strong><span>أفكار منشورة</span></div>
+      <div><strong>—</strong><span>متابع</span></div>
+      <div><strong>—</strong><span>متابَعون</span></div>
     </div>
 
     <div class="profile-tabs">
@@ -590,6 +590,10 @@ h1,h2,h3{
 </div>
 
 <script>
+  const API_BASE = 'https://innovation-grid-api.rowanhamdi87.workers.dev';
+</script>
+
+<script>
 
 /* ---- main.js ---- */
 // Innovation Grid — plain JS, no build step, works directly on GitHub Pages
@@ -623,7 +627,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -660,94 +689,71 @@ revealTargets.forEach((el) => observer.observe(el));
 })();
 
 /* ---- profile.js ---- */
-// Innovation Grid — user profile page logic
-// NOTE: data below is placeholder for layout/testing.
+// Innovation Grid — user profile page logic (real logged-in identity + real ideas)
+// "Followers/Following" and "Saved" need relation tables that don't exist yet
+// in Airtable, so those stay as honest empty states rather than invented numbers.
 
-const PROFILE = {
-  name: 'مستخدم Innovation Grid',
-  bio: 'مبتكرة مهتمة بحلول الاستدامة والتقنية. عضوة في المجتمع منذ 2026.',
-  skills: ['استدامة', 'تقنية', 'تصميم خدمات'],
-};
-
-const MY_IDEAS = [
-  { author: PROFILE.name, initial: 'م', time: 'منذ 3 أيام', title: 'تطبيق لإعادة تدوير مخلفات المطاعم لعلف الحيوان', description: 'فكرة لتجميع مخلفات الطعام من المطاعم يوميًا وتحويلها لعلف حيواني معتمد.', tags: ['استدامة'], likes: 128, comments: 24, saves: 40 },
-  { author: PROFILE.name, initial: 'م', time: 'منذ أسبوعين', title: 'منصة لتنظيم متطوعي الفعاليات المجتمعية', description: 'نظام بسيط لجدولة المتطوعين وتوزيع المهام في الفعاليات الكبيرة.', tags: ['تقنية'], likes: 61, comments: 9, saves: 15 },
-];
-
-const SAVED_IDEAS = [
-  { author: 'سارة العتيبي', initial: 'س', time: 'منذ 3 ساعات', title: 'تطبيق لإعادة تدوير مخلفات المطاعم لعلف الحيوان', description: 'فكرة لتجميع مخلفات الطعام من المطاعم يوميًا وتحويلها لعلف حيواني معتمد، بالشراكة مع مزارع محلية.', tags: ['استدامة', 'تقنية'], likes: 128, comments: 24, saves: 40 },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
 
 function ideaCardHTML(idea) {
-  const tagsHTML = idea.tags.map((t) => `<span class="idea-tag">${t}</span>`).join('');
   return `
     <article class="idea-card">
       <div class="idea-card-head">
-        <span class="idea-avatar">${idea.initial}</span>
-        <div class="idea-meta"><strong>${idea.author}</strong><br>${idea.time}</div>
+        <span class="idea-avatar">${(LOGGED_IN_USER?.fullName || '؟')[0]}</span>
+        <div class="idea-meta"><strong>${LOGGED_IN_USER?.fullName || '—'}</strong></div>
       </div>
-      <h3>${idea.title}</h3>
-      <p>${idea.description}</p>
-      <div>${tagsHTML}</div>
-      <div class="idea-actions">
-        <button class="idea-action">♡ ${idea.likes}</button>
-        <button class="idea-action">💬 ${idea.comments}</button>
-        <button class="idea-action">↗ مشاركة</button>
-        <button class="idea-action">⭑ ${idea.saves}</button>
-      </div>
+      <h3>${idea.Title || '—'}</h3>
+      <p>${idea.Description || ''}</p>
     </article>
   `;
 }
 
-document.getElementById('profileName').textContent = PROFILE.name;
-document.getElementById('profileBio').textContent = PROFILE.bio;
-document.getElementById('profileSkills').innerHTML = PROFILE.skills.map((s) => `<span class="idea-tag">${s}</span>`).join('');
-
 const ideaListEl = document.getElementById('profileIdeaList');
-function renderTab(tab) {
-  const data = tab === 'savedIdeas' ? SAVED_IDEAS : MY_IDEAS;
-  ideaListEl.innerHTML = data.length
-    ? data.map(ideaCardHTML).join('')
-    : `<p style="color:var(--slate-2);">مفيش أفكار هنا لسه.</p>`;
-}
-renderTab('myIdeas');
 
-document.querySelectorAll('.profile-tabs .filter-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.profile-tabs .filter-btn').forEach((b) => b.classList.remove('is-active'));
-    btn.classList.add('is-active');
-    renderTab(btn.dataset.tab);
+if (!LOGGED_IN_USER) {
+  document.getElementById('profileName').textContent = 'سجّلي دخولك عشان تشوفي حسابك';
+  document.getElementById('profileBio').textContent = '';
+  document.getElementById('profileSkills').innerHTML = '';
+  document.querySelectorAll('.profile-stats strong').forEach((el) => { el.textContent = '—'; });
+  if (ideaListEl) ideaListEl.innerHTML = `<p style="color:var(--slate-2);">سجّلي دخولك الأول.</p>`;
+} else {
+  document.getElementById('profileName').textContent = LOGGED_IN_USER.fullName || '—';
+  document.getElementById('profileBio').textContent = LOGGED_IN_USER.role ? `الدور: ${LOGGED_IN_USER.role}` : '';
+  document.getElementById('profileSkills').innerHTML = '';
+  document.querySelectorAll('.profile-stats strong').forEach((el) => { el.textContent = '—'; }); // followers/following need a relation table, not tracked yet
+
+  async function loadMyIdeas() {
+    if (!ideaListEl) return;
+    try {
+      const res = await fetch(`${API_BASE}/ideas?ownerId=${LOGGED_IN_USER.id}`);
+      const data = await res.json();
+      const ideas = data.records || [];
+      ideaListEl.innerHTML = ideas.length
+        ? ideas.map(ideaCardHTML).join('')
+        : `<p style="color:var(--slate-2);">لسه ما شاركتيش أي فكرة.</p>`;
+    } catch {
+      ideaListEl.innerHTML = `<p style="color:#B42318;">تعذّر تحميل أفكارك.</p>`;
+    }
+  }
+
+  document.querySelectorAll('.profile-tabs .filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.profile-tabs .filter-btn').forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      if (btn.dataset.tab === 'savedIdeas') {
+        ideaListEl.innerHTML = `<p style="color:var(--slate-2);">ميزة حفظ الأفكار لسه مش متاحة، هتتفعّل قريبًا.</p>`;
+      } else {
+        loadMyIdeas();
+      }
+    });
   });
-});
 
-// ---- Edit profile modal ----
-const overlay = document.getElementById('editProfileOverlay');
+  loadMyIdeas();
+}
+
 document.getElementById('editProfileBtn')?.addEventListener('click', () => {
-  document.getElementById('editName').value = PROFILE.name;
-  document.getElementById('editBio').value = PROFILE.bio;
-  document.getElementById('editSkills').value = PROFILE.skills.join('، ');
-  overlay.hidden = false;
+  alert('تعديل الاسم والنبذة هيتفعّل قريبًا.');
 });
-document.getElementById('closeEditProfile')?.addEventListener('click', () => { overlay.hidden = true; });
-document.getElementById('cancelEditProfile')?.addEventListener('click', () => { overlay.hidden = true; });
-overlay?.addEventListener('click', (e) => { if (e.target === overlay) overlay.hidden = true; });
-
-const editProfileForm = document.getElementById('editProfileForm');
-const editProfileMsg = document.getElementById('editProfileMsg');
-if (editProfileForm) {
-  editProfileForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(editProfileForm));
-    PROFILE.name = data.name || PROFILE.name;
-    PROFILE.bio = data.bio || PROFILE.bio;
-    PROFILE.skills = data.skills ? data.skills.split('،').map((s) => s.trim()).filter(Boolean) : PROFILE.skills;
-    document.getElementById('profileName').textContent = PROFILE.name;
-    document.getElementById('profileBio').textContent = PROFILE.bio;
-    document.getElementById('profileSkills').innerHTML = PROFILE.skills.map((s) => `<span class="idea-tag">${s}</span>`).join('');
-    editProfileMsg.textContent = 'سيتم حفظ التعديلات فعليًا عند ربط المنصة بقاعدة البيانات.';
-    editProfileMsg.className = 'form-msg success';
-  });
-}
 
 /* ---- lang-switcher.js ---- */
 // Innovation Grid — language switcher

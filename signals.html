@@ -701,12 +701,12 @@ h1,h2,h3{
   <div class="dash-main">
     <header class="dash-topbar">
       <div>
-        <p class="dash-company-tag">شركة سُبل الرياض القابضة</p>
+        <p class="dash-company-tag"></p>
         <h1>الإشارات والرادار الاستراتيجي</h1>
       </div>
       <div class="dash-topbar-actions">
         <button class="btn btn-solid" id="openSignalModal">+ إشارة جديدة</button>
-        <span class="avatar">م</span>
+        <span class="avatar"></span>
       </div>
     <div id="langSwitcher"></div>
 </header>
@@ -821,7 +821,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -859,98 +884,26 @@ revealTargets.forEach((el) => observer.observe(el));
 
 /* ---- signals.js ---- */
 // Innovation Grid — signals/radar/targets page logic
-// NOTE: all data below is placeholder for layout/testing.
-// Once the Cloudflare Worker + Airtable backend is wired, this will
-// pull real records scoped to the logged-in company.
-
-const TARGETS = [
-  { name: 'كفاءة التشغيل', progress: 68, sub: '+8% عن الربع الماضي' },
-  { name: 'تجربة العميل', progress: 41, sub: '3 مبادرات نشطة' },
-  { name: 'استدامة', progress: 52, sub: 'هدف 2026: خفض 20%' },
-  { name: 'نمو إيرادات جديدة', progress: 24, sub: 'مرحلة مبكرة' },
-];
+// NOTE: there's no Signals or Targets table in Airtable yet, so this section
+// honestly shows a "not built yet" state instead of inventing numbers.
 
 const targetsGrid = document.getElementById('targetsGrid');
 if (targetsGrid) {
-  targetsGrid.innerHTML = TARGETS.map((t) => `
-    <div class="target-card">
-      <h4>${t.name}</h4>
-      <div class="target-progress-ring">
-        <strong>${t.progress}%</strong>
-        <div class="target-progress-track"><div class="target-progress-fill" style="width:${t.progress}%;"></div></div>
-      </div>
-      <span class="target-sub">${t.sub}</span>
-    </div>
-  `).join('');
-}
-
-// x: قرب من التبني (0 يمين = ناشئ، 100 يسار = معتمد بالكامل) — RTL friendly: نخليها 0..100 من اليسار
-// y: الأثر المحتمل على الشركة (0 تحت، 100 فوق)
-const SIGNALS = [
-  { title: 'الذكاء الاصطناعي التوليدي في خدمة العملاء', maturity: 'accelerating', x: 62, y: 78 },
-  { title: 'الروبوتات الدقيقة في اللوجستيات الداخلية', maturity: 'emerging', x: 22, y: 40 },
-  { title: 'التوائم الرقمية لخطوط الإنتاج', maturity: 'near-adoption', x: 78, y: 60 },
-  { title: 'الدفع اللاتلامسي بالتعرف الحيوي', maturity: 'adopted', x: 92, y: 30 },
-  { title: 'تحليلات الطاقة التنبؤية للمرافق', maturity: 'accelerating', x: 55, y: 50 },
-  { title: 'المحتوى المخصص بالذكاء الاصطناعي', maturity: 'near-adoption', x: 70, y: 85 },
-];
-
-const MATURITY_LABEL = {
-  emerging: 'ناشئة', accelerating: 'في تسارع',
-  'near-adoption': 'قريبة من التبني', adopted: 'معتمدة',
-};
-const MATURITY_COLOR = {
-  emerging: '#3538CD', accelerating: '#B54708',
-  'near-adoption': '#5925DC', adopted: '#067647',
-};
-
-function radarSVG() {
-  const size = 320;
-  const pad = 30;
-  const plot = size - pad * 2;
-
-  const dots = SIGNALS.map((s, i) => {
-    const cx = pad + (s.x / 100) * plot;
-    const cy = pad + (1 - s.y / 100) * plot;
-    const color = MATURITY_COLOR[s.maturity];
-    return `
-      <g class="radar-dot">
-        <circle cx="${cx}" cy="${cy}" r="6" fill="${color}" fill-opacity="0.85"/>
-      </g>
-    `;
-  }).join('');
-
-  return `
-    <svg viewBox="0 0 ${size} ${size}" class="radar-svg">
-      <line x1="${pad}" y1="${size/2}" x2="${size-pad}" y2="${size/2}" stroke="var(--line)" stroke-width="1"/>
-      <line x1="${size/2}" y1="${pad}" x2="${size/2}" y2="${size-pad}" stroke="var(--line)" stroke-width="1"/>
-      <rect x="${pad}" y="${pad}" width="${plot}" height="${plot}" fill="none" stroke="var(--line)" stroke-width="1"/>
-      <text x="${size/2}" y="${size-8}" text-anchor="middle" class="radar-label">قرب من التبني ←</text>
-      <text x="14" y="${size/2}" text-anchor="middle" class="radar-label" transform="rotate(-90 14 ${size/2})">الأثر المحتمل ←</text>
-      ${dots}
-    </svg>
-  `;
+  targetsGrid.innerHTML = `<p style="color:var(--slate-2); grid-column:1/-1;">محتاجين نضيف جدول "الأهداف الاستراتيجية" في قاعدة البيانات عشان القسم ده يشتغل ببيانات حقيقية.</p>`;
 }
 
 const radarWrap = document.getElementById('radarWrap');
-if (radarWrap) radarWrap.innerHTML = radarSVG();
-
-function signalRowHTML(s) {
-  return `
-    <div class="signal-row">
-      <div class="signal-row-head">
-        <strong>${s.title}</strong>
-        <span class="maturity-pill ${s.maturity}">${MATURITY_LABEL[s.maturity]}</span>
-      </div>
-      <p>موضوعة على الرادار حسب قربها من التبني وأثرها المحتمل على أهدافنا الاستراتيجية.</p>
-    </div>
-  `;
+if (radarWrap) {
+  radarWrap.innerHTML = `<p style="color:var(--slate-2); text-align:center;">لسه مفيش إشارات مُضافة.</p>`;
 }
 
 const signalList = document.getElementById('signalList');
-if (signalList) signalList.innerHTML = SIGNALS.map(signalRowHTML).join('');
+if (signalList) {
+  signalList.innerHTML = `<p style="color:var(--slate-2);">لسه مفيش إشارات مُضافة — دوسي "+ إشارة جديدة" عشان تضيفي أول واحدة.</p>`;
+}
 
-// New signal modal
+// New signal modal — UI is ready, but saving needs a Signals table in
+// Airtable first (not created yet).
 const overlay = document.getElementById('signalModalOverlay');
 document.getElementById('openSignalModal')?.addEventListener('click', () => { overlay.hidden = false; });
 document.getElementById('closeSignalModal')?.addEventListener('click', () => { overlay.hidden = true; });
@@ -962,7 +915,7 @@ const signalFormMsg = document.getElementById('signalFormMsg');
 if (signalForm) {
   signalForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    signalFormMsg.textContent = 'سيتم حفظ الإشارة فعليًا عند ربط المنصة بقاعدة البيانات.';
+    signalFormMsg.textContent = 'هتشتغل الميزة دي فعليًا لما نضيف جدول الإشارات في قاعدة البيانات.';
     signalFormMsg.className = 'form-msg success';
   });
 }

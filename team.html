@@ -680,12 +680,12 @@ h1,h2,h3{
   <div class="dash-main">
     <header class="dash-topbar">
       <div>
-        <p class="dash-company-tag">شركة سُبل الرياض القابضة</p>
+        <p class="dash-company-tag"></p>
         <h1>الفريق والصلاحيات</h1>
       </div>
       <div class="dash-topbar-actions">
         <button class="btn btn-solid" id="openInviteModal">+ دعوة موظف</button>
-        <span class="avatar">م</span>
+        <span class="avatar"></span>
       </div>
     <div id="langSwitcher"></div>
 </header>
@@ -789,7 +789,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -826,43 +851,38 @@ revealTargets.forEach((el) => observer.observe(el));
 })();
 
 /* ---- team.js ---- */
-// Innovation Grid — team & permissions page logic
-// NOTE: team data below is placeholder for layout/testing.
-// Once the Worker/Airtable backend is fully wired, this will pull
-// real Users records scoped to the logged-in company.
+// Innovation Grid — team & permissions page logic (live data via the Worker)
 
-let TEAM = [
-  { name: 'خالد المطيري', email: 'khaled@company.com', dept: 'تقنية المعلومات', role: 'Innovation Manager', status: 'active' },
-  { name: 'نورة القحطاني', email: 'noura@company.com', dept: 'الموارد البشرية', role: 'Employee', status: 'active' },
-  { name: 'فهد العتيبي', email: 'fahad@company.com', dept: 'العمليات', role: 'Department Manager', status: 'active' },
-  { name: 'سارة الدوسري', email: 'sara@company.com', dept: 'تقنية المعلومات', role: 'Evaluator', status: 'active' },
-  { name: 'عبدالله الشهري', email: 'abdullah@company.com', dept: 'المرافق', role: 'Employee', status: 'invited' },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+const COMPANY_ID = LOGGED_IN_USER?.companyId;
+
+let TEAM = [];
 
 const ROLE_LABEL = {
   'Company Admin': 'مدير الشركة', 'Innovation Manager': 'مدير ابتكار',
   'Department Manager': 'مدير إدارة', 'Evaluator': 'مُقيّم', 'Employee': 'موظف',
 };
-const STATUS_LABEL = { active: 'نشط', invited: 'دعوة مُرسلة' };
+const STATUS_LABEL = { Accepted: 'نشط', Invited: 'دعوة مُرسلة' };
 
 function roleOptionsHTML(selected) {
   return Object.keys(ROLE_LABEL).map((r) => `<option value="${r}" ${r === selected ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('');
 }
 
-function teamRowHTML(m, i) {
+function teamRowHTML(m) {
+  const status = m.emailVerified ? 'Accepted' : 'Invited';
   return `
-    <tr data-index="${i}">
+    <tr data-id="${m.id}">
       <td>
         <div class="team-row-name">
-          <span class="team-row-avatar">${m.name[0]}</span>
-          <span>${m.name}</span>
+          <span class="team-row-avatar">${(m.fullName || '؟')[0]}</span>
+          <span>${m.fullName || '—'}</span>
         </div>
       </td>
-      <td>${m.email}</td>
-      <td>${m.dept}</td>
-      <td><select class="role-select" data-index="${i}">${roleOptionsHTML(m.role)}</select></td>
-      <td><span class="member-status ${m.status}">${STATUS_LABEL[m.status]}</span></td>
-      <td><button class="remove-member-btn" data-index="${i}">إزالة</button></td>
+      <td>${m.email || '—'}</td>
+      <td>—</td>
+      <td><select class="role-select" data-id="${m.id}">${roleOptionsHTML(m.role)}</select></td>
+      <td><span class="member-status ${status === 'Accepted' ? 'active' : 'invited'}">${STATUS_LABEL[status]}</span></td>
+      <td><button class="remove-member-btn" data-id="${m.id}">إزالة</button></td>
     </tr>
   `;
 }
@@ -871,36 +891,57 @@ const tbody = document.getElementById('teamTableBody');
 const searchInput = document.getElementById('teamSearch');
 const roleFilter = document.getElementById('teamRoleFilter');
 
+async function loadTeam() {
+  if (!COMPANY_ID) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--slate-2); padding:20px;">سجّلي دخولك عشان تشوفي فريق شركتك.</td></tr>`;
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/users?companyId=${COMPANY_ID}`);
+    const data = await res.json();
+    TEAM = data.records || [];
+    renderTeam();
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#B42318; padding:20px;">تعذّر تحميل الفريق.</td></tr>`;
+  }
+}
+
 function renderTeam() {
   const q = (searchInput?.value || '').trim().toLowerCase();
   const roleQ = roleFilter?.value || 'all';
   const filtered = TEAM
-    .map((m, i) => ({ ...m, _i: i }))
-    .filter((m) => (roleQ === 'all' || m.role === roleQ))
-    .filter((m) => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q));
+    .filter((m) => roleQ === 'all' || m.role === roleQ)
+    .filter((m) => !q || (m.fullName || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q));
 
   tbody.innerHTML = filtered.length
-    ? filtered.map((m) => teamRowHTML(m, m._i)).join('')
+    ? filtered.map(teamRowHTML).join('')
     : `<tr><td colspan="6" style="color:var(--slate-2); text-align:center; padding:20px;">لا يوجد أعضاء مطابقين.</td></tr>`;
 
   tbody.querySelectorAll('.role-select').forEach((sel) => {
-    sel.addEventListener('change', () => {
-      TEAM[Number(sel.dataset.index)].role = sel.value;
-      // TODO: PATCH the user's Role in Airtable via the Worker once wired.
+    sel.addEventListener('change', async () => {
+      try {
+        await fetch(`${API_BASE}/users/${sel.dataset.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: sel.value }),
+        });
+      } catch { /* silently keep UI value */ }
     });
   });
   tbody.querySelectorAll('.remove-member-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const idx = Number(btn.dataset.index);
-      if (confirm(`إزالة ${TEAM[idx].name} من الشركة؟`)) {
-        TEAM.splice(idx, 1);
-        renderTeam();
+    btn.addEventListener('click', async () => {
+      const member = TEAM.find((m) => m.id === btn.dataset.id);
+      if (!member || !confirm(`إزالة ${member.fullName} من الشركة؟`)) return;
+      try {
+        await fetch(`${API_BASE}/users/${btn.dataset.id}`, { method: 'DELETE' });
+        loadTeam();
+      } catch {
+        alert('تعذّر إزالة العضو.');
       }
     });
   });
 }
 
-if (tbody) renderTeam();
+if (tbody) loadTeam();
 searchInput?.addEventListener('input', renderTeam);
 roleFilter?.addEventListener('change', renderTeam);
 
@@ -917,16 +958,15 @@ if (inviteForm) {
   inviteForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(inviteForm));
-    const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || '{}');
     try {
       const res = await fetch(`${API_BASE}/invite-employee`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyId: loggedInUser.companyId || '',
+          companyId: COMPANY_ID || '',
           email: data.email,
           fullName: data.fullName,
           role: data.role,
-          invitedByName: loggedInUser.fullName || 'مدير الشركة',
+          invitedByName: LOGGED_IN_USER?.fullName || 'مدير الشركة',
         }),
       });
       const result = await res.json();
@@ -938,6 +978,7 @@ if (inviteForm) {
       inviteFormMsg.textContent = 'تم إرسال الدعوة بالبريد الإلكتروني.';
       inviteFormMsg.className = 'form-msg success';
       inviteForm.reset();
+      loadTeam();
     } catch (err) {
       inviteFormMsg.textContent = 'تعذّر الاتصال بالخادم';
       inviteFormMsg.className = 'form-msg error';

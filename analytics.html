@@ -541,7 +541,7 @@ h1,h2,h3{
   <div class="dash-main">
     <header class="dash-topbar">
       <div>
-        <p class="dash-company-tag">شركة سُبل الرياض القابضة</p>
+        <p class="dash-company-tag"></p>
         <h1>التقارير والتحليلات</h1>
       </div>
       <div class="dash-topbar-actions">
@@ -560,23 +560,19 @@ h1,h2,h3{
       <div class="kpi-grid">
         <div class="kpi-card">
           <span class="kpi-label">إجمالي الأفكار</span>
-          <strong class="kpi-value">312</strong>
-          <span class="kpi-delta up">+18% هذا الشهر</span>
+          <strong class="kpi-value">—</strong>
         </div>
         <div class="kpi-card">
           <span class="kpi-label">معدل التحويل لمشروع</span>
-          <strong class="kpi-value">14%</strong>
-          <span class="kpi-delta up">+2 نقطة</span>
+          <strong class="kpi-value">—</strong>
         </div>
         <div class="kpi-card">
           <span class="kpi-label">متوسط زمن التقييم</span>
-          <strong class="kpi-value">4.2</strong>
-          <span class="kpi-delta down">يوم — أسرع بيوم</span>
+          <strong class="kpi-value">—</strong>
         </div>
         <div class="kpi-card">
           <span class="kpi-label">نسبة مشاركة الموظفين</span>
-          <strong class="kpi-value">37%</strong>
-          <span class="kpi-delta up">+5% عن الربع الماضي</span>
+          <strong class="kpi-value">—</strong>
         </div>
       </div>
 
@@ -640,7 +636,32 @@ const observer = new IntersectionObserver(
 );
 revealTargets.forEach((el) => observer.observe(el));
 
-// Company welcome video — show the section only if the logged-in user's
+// Populate real logged-in identity where it appears (company name in the
+// dashboard topbar, avatar initial) — never leave a hardcoded fake name.
+(async function populateIdentity() {
+  const loggedInUser = JSON.parse(localStorage.getItem('ig_user') || 'null');
+  const tag = document.querySelector('.dash-company-tag');
+  const avatarEls = document.querySelectorAll('.avatar');
+
+  if (loggedInUser?.fullName) {
+    avatarEls.forEach((el) => { el.textContent = loggedInUser.fullName.trim()[0] || '؟'; });
+  }
+
+  if (tag) {
+    if (!loggedInUser?.companyId) {
+      tag.textContent = '';
+      return;
+    }
+    if (typeof API_BASE === 'undefined') return;
+    try {
+      const res = await fetch(`${API_BASE}/company/${loggedInUser.companyId}`);
+      const company = await res.json();
+      tag.textContent = company['Company Name'] || '';
+    } catch {
+      tag.textContent = '';
+    }
+  }
+})();
 // company has set one. Anonymous visitors see no video (no company context
 // exists yet for anonymous visitors without a slug/subdomain per company).
 (async function renderCompanyVideo() {
@@ -677,78 +698,80 @@ revealTargets.forEach((el) => observer.observe(el));
 })();
 
 /* ---- analytics.js ---- */
-// Innovation Grid — analytics page logic
-// NOTE: all data below is placeholder for layout/testing.
-// Once the Cloudflare Worker + Airtable backend is wired, this will
-// pull real aggregated records from Airtable.
+// Innovation Grid — analytics page logic (live data where possible)
 
-const MONTHLY_IDEAS = [
-  { label: 'مارس', value: 38 },
-  { label: 'أبريل', value: 45 },
-  { label: 'مايو', value: 41 },
-  { label: 'يونيو', value: 58 },
-  { label: 'يوليو', value: 66 },
-  { label: 'أغسطس', value: 64 },
-];
+const LOGGED_IN_USER = JSON.parse(localStorage.getItem('ig_user') || 'null');
+const COMPANY_ID = LOGGED_IN_USER?.companyId;
 
-const barChart = document.getElementById('ideasBarChart');
-if (barChart) {
-  const max = Math.max(...MONTHLY_IDEAS.map((m) => m.value));
-  barChart.innerHTML = `
-    <div class="bar-chart">
-      ${MONTHLY_IDEAS.map((m) => `
-        <div class="bar-chart-col">
-          <span class="bar-chart-value">${m.value}</span>
-          <div class="bar-chart-bar" style="height:${(m.value / max) * 140}px;"></div>
-          <span class="bar-chart-label">${m.label}</span>
+async function loadAnalytics() {
+  const barChart = document.getElementById('ideasBarChart');
+  const funnelChart = document.getElementById('funnelChart');
+  const contributorsBody = document.getElementById('contributorsBody');
+  const kpiValues = document.querySelectorAll('.kpi-value');
+
+  if (!COMPANY_ID) {
+    if (barChart) barChart.innerHTML = `<p style="color:var(--slate-2);">سجّلي دخولك عشان تشوفي تحليلات شركتك.</p>`;
+    if (funnelChart) funnelChart.innerHTML = '';
+    if (contributorsBody) contributorsBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--slate-2); padding:20px;">سجّلي دخولك الأول.</td></tr>`;
+    return;
+  }
+
+  try {
+    const [ideasRes, challengesRes, projectsRes] = await Promise.all([
+      fetch(`${API_BASE}/ideas?companyId=${COMPANY_ID}`).then((r) => r.json()),
+      fetch(`${API_BASE}/challenges?companyId=${COMPANY_ID}`).then((r) => r.json()),
+      fetch(`${API_BASE}/projects?companyId=${COMPANY_ID}`).then((r) => r.json()),
+    ]);
+    const ideas = ideasRes.records || [];
+    const challenges = challengesRes.records || [];
+    const projects = projectsRes.records || [];
+
+    if (kpiValues[0]) kpiValues[0].textContent = ideas.length;
+    const converted = projects.filter((p) => p['Source Idea'] || p['Source Solution']).length;
+    if (kpiValues[1]) kpiValues[1].textContent = ideas.length ? Math.round((converted / ideas.length) * 100) + '%' : '—';
+    if (kpiValues[2]) kpiValues[2].textContent = '—'; // needs evaluation timestamps, not tracked yet
+    if (kpiValues[3]) kpiValues[3].textContent = '—'; // needs a participation metric, not tracked yet
+
+    // Funnel: computed from real idea statuses + real project conversions
+    if (funnelChart) {
+      const submitted = ideas.length;
+      const underReview = ideas.filter((i) => i.Status === 'Under Review').length;
+      const approved = ideas.filter((i) => i.Status === 'Approved').length;
+      const FUNNEL = [
+        { label: 'أفكار مستلمة', value: submitted },
+        { label: 'تحت التقييم', value: underReview },
+        { label: 'مقبولة', value: approved },
+        { label: 'تحوّلت لمشروع', value: converted },
+      ];
+      const max = Math.max(1, ...FUNNEL.map((f) => f.value));
+      funnelChart.innerHTML = `
+        <div class="funnel-chart">
+          ${FUNNEL.map((f) => `
+            <div class="funnel-row">
+              <span class="funnel-label">${f.label}</span>
+              <div class="funnel-track">
+                <div class="funnel-fill" style="width:${(f.value / max) * 100}%;"><span>${f.value}</span></div>
+              </div>
+            </div>
+          `).join('')}
         </div>
-      `).join('')}
-    </div>
-  `;
+      `;
+    }
+
+    // Monthly trend and contributor leaderboard need historical/owner-name
+    // data this schema doesn't track yet — honest empty states, not invented numbers.
+    if (barChart) {
+      barChart.innerHTML = `<p style="color:var(--slate-2); font-size:13.5px;">محتاجين نضيف تتبع تاريخي للأفكار عشان نعرض الاتجاه الشهري.</p>`;
+    }
+    if (contributorsBody) {
+      contributorsBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--slate-2); padding:20px;">محتاجين نربط اسم صاحب كل فكرة عشان نعرض لوحة المساهمين.</td></tr>`;
+    }
+  } catch {
+    if (barChart) barChart.innerHTML = `<p style="color:#B42318;">تعذّر تحميل البيانات.</p>`;
+  }
 }
 
-const FUNNEL = [
-  { label: 'أفكار مستلمة', value: 312, pct: 100 },
-  { label: 'تحت التقييم', value: 190, pct: 61 },
-  { label: 'مقبولة', value: 96, pct: 31 },
-  { label: 'تحوّلت لمشروع', value: 44, pct: 14 },
-];
-
-const funnelChart = document.getElementById('funnelChart');
-if (funnelChart) {
-  funnelChart.innerHTML = `
-    <div class="funnel-chart">
-      ${FUNNEL.map((f) => `
-        <div class="funnel-row">
-          <span class="funnel-label">${f.label}</span>
-          <div class="funnel-track">
-            <div class="funnel-fill" style="width:${f.pct}%;"><span>${f.value}</span></div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-const CONTRIBUTORS = [
-  { name: 'سارة العتيبي', dept: 'تقنية المعلومات', submitted: 14, approved: 6 },
-  { name: 'محمد الحربي', dept: 'العمليات', submitted: 11, approved: 5 },
-  { name: 'لمى الزهراني', dept: 'الموارد البشرية', submitted: 9, approved: 4 },
-  { name: 'فهد العتيبي', dept: 'المشتريات', submitted: 8, approved: 3 },
-  { name: 'نورة القحطاني', dept: 'تقنية المعلومات', submitted: 7, approved: 3 },
-];
-
-const contributorsBody = document.getElementById('contributorsBody');
-if (contributorsBody) {
-  contributorsBody.innerHTML = CONTRIBUTORS.map((c) => `
-    <tr>
-      <td>${c.name}</td>
-      <td>${c.dept}</td>
-      <td>${c.submitted}</td>
-      <td>${c.approved}</td>
-    </tr>
-  `).join('');
-}
+loadAnalytics();
 
 document.getElementById('exportReportBtn')?.addEventListener('click', () => {
   alert('سيتم تفعيل تصدير التقارير كملف PDF قريبًا.');
